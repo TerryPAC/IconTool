@@ -404,11 +404,20 @@
   // 例: "Montserrat-Bold.ttf"      → { family: 'Montserrat',      weight: 700, slant: 0 }
   //     "RobotoCondensed-BoldItalic.ttf" → { family: 'RobotoCondensed', weight: 700, slant: 1 }
   //     "Montserrat-SemiBold.otf"  → { family: 'Montserrat',      weight: 600, slant: 0 }
+  // 由字体文件名生成唯一的家族别名（用于在 TypefaceFontProvider 中注册/引用），
+  // 保证每个字体文件 = 一个独立家族，避免同名家族下 Bold/Medium 等不同字重互相覆盖。
+  // 例: "Montserrat-Bold.ttf" → "Montserrat-Bold"; "Montserrat-Medium.ttf" → "Montserrat-Medium"
+  function fontAlias(filename) {
+    if (!filename) return 'Roboto';
+    return filename.replace(/\.(ttf|otf)$/i, '').replace(/\s+/g, '');
+  }
+
   function parseFontName(filename) {
-    if (!filename) return { family: 'Roboto', weight: 400, slant: 0 };
+    if (!filename) return { family: 'Roboto', alias: 'Roboto', weight: 400, slant: 0 };
     const base = filename.replace(/\.(ttf|otf)$/i, '');
+    const alias = base.replace(/\s+/g, '');
     const dash = base.lastIndexOf('-');
-    if (dash === -1) return { family: base, weight: 400, slant: 0 };
+    if (dash === -1) return { family: base, alias, weight: 400, slant: 0 };
 
     const family = base.substring(0, dash).replace(/\s+/g, '');
     const suffix = base.substring(dash + 1);
@@ -433,6 +442,7 @@
 
     return {
       family,
+      alias,
       weight: weightMap[weightKey] ?? 400,
       slant: isItalic ? 1 : 0,
     };
@@ -616,11 +626,17 @@
       if (item.parts) item.parts.forEach((p) => { if (p.font) fontNames.add(p.font); });
     });
 
-    const fontBuffers = await Promise.all(Array.from(fontNames).map(getFont));
-    const validBuffers = fontBuffers.filter((b) => b !== null);
+    const fontEntries = await Promise.all(
+      Array.from(fontNames).map(async (name) => ({ name, buffer: await getFont(name) }))
+    );
 
     if (fontMgr) fontMgr.delete();
-    fontMgr = CK.FontMgr.FromData(...validBuffers);
+    // 用 TypefaceFontProvider 把每个字体文件注册为唯一家族别名，
+    // 不再依赖 Skia 在同名家族下按 weight 匹配（那会导致 Bold/Medium 互相覆盖）。
+    fontMgr = CK.TypefaceFontProvider.Make();
+    fontEntries.forEach(({ name, buffer }) => {
+      if (buffer) fontMgr.registerFont(buffer, fontAlias(name));
+    });
 
     // Extract topPadding / bottomPadding from first / last items
     let topPadding = 0;
@@ -641,14 +657,14 @@
       const spacing = Number(item.spacing) || 0;
       const lineH = (Number(item.line_height) || 0) * SCALE;
       const maxLines = Number(item.lines) || 0;
-      const { family: itemFamily, weight: itemWeight, slant: itemSlant } = parseFontName(item.font);
+      const { alias: itemAlias, weight: itemWeight, slant: itemSlant } = parseFontName(item.font);
 
       // strutStyle.leading (em) maps Android setLineSpacing(extra, 1f) per-line spacing
       const strutStyle = (lineH > 0 && fontSize > 0) ? {
         strutEnabled: true,
         forceStrutHeight: false,
         fontSize,
-        fontFamilies: [itemFamily, 'Roboto', 'sans-serif'],
+        fontFamilies: [itemAlias, 'Roboto', 'sans-serif'],
         fontStyle: { weight: itemWeight, slant: itemSlant },
         leading: lineH / fontSize,
       } : null;
@@ -661,7 +677,7 @@
         textStyle: {
           color,
           fontSize,
-          fontFamilies: [itemFamily, 'Roboto', 'sans-serif'],
+          fontFamilies: [itemAlias, 'Roboto', 'sans-serif'],
           fontStyle: { weight: itemWeight, slant: itemSlant },
           letterSpacing: spacing * fontSize,
         },
@@ -670,17 +686,17 @@
         ...(strutStyle ? { strutStyle } : {}),
       });
 
-      const builder = CK.ParagraphBuilder.Make(paraStyle, fontMgr);
+      const builder = CK.ParagraphBuilder.MakeFromFontProvider(paraStyle, fontMgr);
       if (item.parts && item.parts.length > 0) {
         item.parts.forEach((p) => {
           const range = p.text_range || {};
           const sub = (item.content || '').substring(range.start || 0, (range.start || 0) + (range.length || 0));
           const pSize = (Number(p.size) || Number(item.size) || 0) * SCALE;
-          const { family: pFamily, weight: pWeight, slant: pSlant } = parseFontName(p.font || item.font);
+          const { alias: pAlias, weight: pWeight, slant: pSlant } = parseFontName(p.font || item.font);
           builder.pushStyle(new CK.TextStyle({
             color: CK.parseColorString(p.color || item.color || '#000000'),
             fontSize: pSize,
-            fontFamilies: [pFamily, 'Roboto', 'sans-serif'],
+            fontFamilies: [pAlias, 'Roboto', 'sans-serif'],
             fontStyle: { weight: pWeight, slant: pSlant },
             letterSpacing: (Number(p.spacing ?? item.spacing) || 0) * pSize,
           }));
@@ -691,7 +707,7 @@
         builder.pushStyle(new CK.TextStyle({
           color,
           fontSize,
-          fontFamilies: [itemFamily, 'Roboto', 'sans-serif'],
+          fontFamilies: [itemAlias, 'Roboto', 'sans-serif'],
           fontStyle: { weight: itemWeight, slant: itemSlant },
           letterSpacing: spacing * fontSize,
         }));
