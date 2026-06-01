@@ -384,7 +384,7 @@
   const fontCache = new Map();
   const S8_WIDTH = 1440;
   const DISPLAY_WIDTH = 360;
-  const SCALE = DISPLAY_WIDTH / S8_WIDTH;
+  const RENDER_SCALE = S8_WIDTH / DISPLAY_WIDTH;
   const SCALE_TO_NORMAL = 0.8;
 
   const canvas = document.getElementById('skCanvas');
@@ -642,8 +642,8 @@
     let topPadding = 0;
     let bottomPadding = 0;
     if (items.length > 0) {
-      topPadding = (Number(items[0].top_padding) || 0) * SCALE;
-      bottomPadding = (Number(items[items.length - 1].bottom_padding) || 0) * SCALE;
+      topPadding = Number(items[0].top_padding) || 0;
+      bottomPadding = Number(items[items.length - 1].bottom_padding) || 0;
     }
     let bannerHeight = 0;
 
@@ -652,10 +652,10 @@
       if (item.type === 'line') {
         return { kind: 'line', item };
       }
-      const fontSize = (Number(item.size) || 0) * SCALE;
+      const fontSize = Number(item.size) || 0;
       const color = CK.parseColorString(item.color || '#000000');
       const spacing = Number(item.spacing) || 0;
-      const lineH = (Number(item.line_height) || 0) * SCALE;
+      const lineH = Number(item.line_height) || 0;
       const maxLines = Number(item.lines) || 0;
       const { alias: itemAlias, weight: itemWeight, slant: itemSlant } = parseFontName(item.font);
 
@@ -671,7 +671,7 @@
 
       // parts with align:"top" get Android dp2px(3f) topMargin; approximate by shifting whole paragraph
       const topAlignOffset = Array.isArray(item.parts) && item.parts.some(p => p && p.align === 'top')
-        ? 3 * SCALE : 0;
+        ? 3 * RENDER_SCALE : 0;
 
       const paraStyle = new CK.ParagraphStyle({
         textStyle: {
@@ -691,7 +691,7 @@
         item.parts.forEach((p) => {
           const range = p.text_range || {};
           const sub = (item.content || '').substring(range.start || 0, (range.start || 0) + (range.length || 0));
-          const pSize = (Number(p.size) || Number(item.size) || 0) * SCALE;
+          const pSize = Number(p.size) || Number(item.size) || 0;
           const { alias: pAlias, weight: pWeight, slant: pSlant } = parseFontName(p.font || item.font);
           builder.pushStyle(new CK.TextStyle({
             color: CK.parseColorString(p.color || item.color || '#000000'),
@@ -716,53 +716,48 @@
       }
 
       const para = builder.build();
-      para.layout(DISPLAY_WIDTH);
+      para.layout(S8_WIDTH);
       builder.delete();
       return { kind: 'text', item, para, topAlignOffset };
     });
 
     // Recalculate bannerHeight using actual paragraph heights
     bannerHeight = topPadding + bottomPadding;
-    preBuilt.forEach((entry, idx) => {
-      const isFirst = idx === 0;
-      const isLast = idx === preBuilt.length - 1;
+    preBuilt.forEach((entry) => {
       const topMargin = Number(entry.item.top_margin) || 0;
-      bannerHeight += isFirst ? topMargin * SCALE : topMargin;
+      bannerHeight += topMargin;
       if (entry.kind === 'line') {
-        bannerHeight += Math.max(1, parseFloat(entry.item.height) || 1);
+        bannerHeight += Math.max(RENDER_SCALE, (parseFloat(entry.item.height) || 1) * RENDER_SCALE);
       } else {
         bannerHeight += entry.para.getHeight();
       }
       const bottomMargin = Number(entry.item.bottom_margin) || 0;
-      bannerHeight += isLast ? bottomMargin * SCALE : bottomMargin;
+      bannerHeight += bottomMargin;
     });
 
-    canvas.width = DISPLAY_WIDTH * window.devicePixelRatio;
-    canvas.height = bannerHeight * window.devicePixelRatio;
+    canvas.width = S8_WIDTH;
+    canvas.height = bannerHeight;
     canvas.style.width = '100%';
     canvas.style.height = 'auto';
 
     const surface = CK.MakeCanvasSurface(canvas);
     surface.drawOnce((skCanvas) => {
-      skCanvas.scale(window.devicePixelRatio, window.devicePixelRatio);
 
       const bg = data.background?.color || '#ffffff';
       const paint = new CK.Paint();
       paint.setColor(CK.parseColorString(bg));
-      skCanvas.drawRect(CK.LTRBRect(0, 0, DISPLAY_WIDTH, bannerHeight), paint);
+      skCanvas.drawRect(CK.LTRBRect(0, 0, S8_WIDTH, bannerHeight), paint);
 
       let currentY = topPadding;
 
-      preBuilt.forEach((entry, idx) => {
-        const isFirst = idx === 0;
-        const isLast = idx === preBuilt.length - 1;
+      preBuilt.forEach((entry) => {
         const topMargin = Number(entry.item.top_margin) || 0;
-        currentY += isFirst ? topMargin * SCALE : topMargin;
+        currentY += topMargin;
 
         if (entry.kind === 'line') {
-          const w = (Number(entry.item.width) || 0) * SCALE;
-          const h = Math.max(1, parseFloat(entry.item.height) || 1);
-          const x = (DISPLAY_WIDTH - w) / 2;
+          const w = Number(entry.item.width) || 0;
+          const h = Math.max(RENDER_SCALE, (parseFloat(entry.item.height) || 1) * RENDER_SCALE);
+          const x = (S8_WIDTH - w) / 2;
           paint.setColor(CK.parseColorString(entry.item.color || '#000000'));
           skCanvas.drawRect(CK.LTRBRect(x, currentY, x + w, currentY + h), paint);
           currentY += h;
@@ -772,7 +767,7 @@
           entry.para.delete();
         }
         const bottomMargin = Number(entry.item.bottom_margin) || 0;
-        currentY += isLast ? bottomMargin * SCALE : bottomMargin;
+        currentY += bottomMargin;
       });
       paint.delete();
     });
