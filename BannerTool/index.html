@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Skia Banner Preview (Galaxy S8)</title>
+  <link rel="preload" href="vendor/canvaskit/canvaskit.wasm" as="fetch" type="application/wasm" crossorigin>
+  <link rel="preload" href="vendor/canvaskit/canvaskit.js" as="script">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
     * { box-sizing: border-box; }
@@ -349,7 +351,7 @@
     <div class="panel-header">
       <div class="panel-header-row">
         <div class="panel-header-left">
-          <span style="color:#dcfce7;font-weight:700;">S8 编辑</span>
+          <span style="color:#dcfce7;font-weight:700;">编辑</span>
           <span>— 生效编辑区</span>
         </div>
         <span class="effective-badge">Effective</span>
@@ -376,7 +378,7 @@
   <span class="hint">应用当前编辑并更新配置</span>
 </footer>
 
-<script src="https://unpkg.com/canvaskit-wasm@0.39.1/bin/full/canvaskit.js"></script>
+<script src="vendor/canvaskit/canvaskit.js"></script>
 <script src="app.js"></script>
 
 </body>

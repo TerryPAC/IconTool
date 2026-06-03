@@ -111,7 +111,7 @@ function syncS8FromFull() {
   }
 }
 
-function applyUpdate() {
+async function applyUpdate() {
   const fullRaw = fullJsonEditor.value.trim();
   if (!fullRaw) {
     setStatus('请先在左侧粘贴完整 JSON', true);
@@ -137,10 +137,10 @@ function applyUpdate() {
   fullData.normal = s8ToNormal(s8Items);
 
   fullJsonEditor.value = JSON.stringify(fullData, null, 2);
-  setStatus('更新成功', false);
+  await copyFullJson('更新成功，已复制完整 JSON');
 }
 
-async function copyFullJson() {
+async function copyFullJson(successMsg = '已复制完整 JSON') {
   const text = fullJsonEditor.value;
   if (!text.trim()) {
     setStatus('当前无可复制内容', true);
@@ -148,12 +148,12 @@ async function copyFullJson() {
   }
   try {
     await navigator.clipboard.writeText(text);
-    setStatus('已复制完整 JSON', false);
+    setStatus(successMsg, false);
   } catch (_) {
     fullJsonEditor.select();
     document.execCommand('copy');
     window.getSelection()?.removeAllRanges();
-    setStatus('已复制完整 JSON', false);
+    setStatus(successMsg, false);
   }
 }
 
@@ -165,7 +165,7 @@ function setStatus(msg, isError) {
 async function init() {
   try {
     CK = await CanvasKitInit({
-      locateFile: (file) => `https://unpkg.com/canvaskit-wasm@0.39.1/bin/full/${file}`
+      locateFile: (file) => `vendor/canvaskit/${file}`,
     });
     document.getElementById('loadingOverlay').style.display = 'none';
     fullJsonEditor.addEventListener('input', debounce(() => {

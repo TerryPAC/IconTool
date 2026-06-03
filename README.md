@@ -12,6 +12,10 @@ Upload images, pick a color, adjust tolerance, optionally limit the area with a 
 
 Edit and preview Skia-style banner JSON for Galaxy S8 (and related `normal` / `ipad` configs). Paste or edit JSON, tweak the S8 section, and see a live CanvasKit render with bundled fonts.
 
+### [MeasurePng](https://terrypac.github.io/MeasurePng/) — PNG Transparent Area Measurement
+
+Upload PNG, JPEG, or WEBP images to detect transparent areas, define printable regions from product size and bleed, align and rotate the print area, drag corners for custom margins, and copy normalized (PO) or pixel-based (Template) coordinates. Hosted separately on GitHub Pages.
+
 ## Project layout
 
 ```
@@ -43,5 +47,6 @@ Hosted on GitHub Pages:
 | Home | [https://terrypac.github.io/IconTool/](https://terrypac.github.io/IconTool/) |
 | IconTool | [https://terrypac.github.io/IconTool/IconTool/](https://terrypac.github.io/IconTool/IconTool/) |
 | BannerTool | [https://terrypac.github.io/IconTool/BannerTool/](https://terrypac.github.io/IconTool/BannerTool/) |
+| MeasurePng | [https://terrypac.github.io/MeasurePng/](https://terrypac.github.io/MeasurePng/) (external) |
 
 > **Note:** The repository is still named `IconTool`, so paths include `/IconTool/`. Renaming the repo to `WebTools` on GitHub would change the base URL to `https://terrypac.github.io/WebTools/`.

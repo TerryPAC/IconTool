@@ -71,6 +71,8 @@
 ```
 BannerTool/
 ├── index.html      # 单页应用（UI + 逻辑 + 渲染）
+├── app.js          # 编辑、同步、CanvasKit 渲染
+├── vendor/canvaskit/  # 自托管 CanvasKit 0.39.1 full（canvaskit.js + canvaskit.wasm）
 ├── fonts/          #  bundled 字体（与 JSON 中 font 字段文件名对应）
 └── README.md
 ```
@@ -78,8 +80,8 @@ BannerTool/
 ## 技术栈
 
 - HTML5 / CSS3 / Vanilla JavaScript
-- [CanvasKit WASM](https://skia.org/docs/user/modules/canvaskit/) 0.39.1（Skia 段落排版与绘制）
-- 本地 `fonts/` + `FontMgr.FromData` 加载字体
+- [CanvasKit WASM](https://skia.org/docs/user/modules/canvaskit/) 0.39.1 full，自托管于 `vendor/canvaskit/`（`index.html` 预加载，避免依赖 unpkg）
+- 本地 `fonts/` + `TypefaceFontProvider` 加载字体
 
 
 ## 相关
