@@ -2,6 +2,8 @@
 
 A collection of browser-only utilities. All processing happens locally in your browser — nothing is uploaded to a server.
 
+Repository: [github.com/TerryPAC/WebTools](https://github.com/TerryPAC/WebTools)
+
 ## Tools
 
 ### [IconTool](./IconTool/) — Image Color Picker & Replacer
@@ -14,7 +16,7 @@ Edit and preview Skia-style banner JSON for Galaxy S8 (and related `normal` / `i
 
 ### [MeasurePng](https://terrypac.github.io/MeasurePng/) — PNG Transparent Area Measurement
 
-Upload PNG, JPEG, or WEBP images to detect transparent areas, define printable regions from product size and bleed, align and rotate the print area, drag corners for custom margins, and copy normalized (PO) or pixel-based (Template) coordinates. Hosted separately on GitHub Pages.
+Detect transparent areas in images, define printable regions with bleed, and export overlay coordinates. Hosted separately on GitHub Pages.
 
 ## Project layout
 
@@ -29,7 +31,10 @@ Upload PNG, JPEG, or WEBP images to detect transparent areas, define printable r
 │   └── README.md
 └── BannerTool/
     ├── index.html
-    └── fonts/
+    ├── app.js
+    ├── vendor/canvaskit/
+    ├── fonts/
+    └── README.md
 ```
 
 ## Tech stack
@@ -40,13 +45,11 @@ Upload PNG, JPEG, or WEBP images to detect transparent areas, define printable r
 
 ## Deployment
 
-Hosted on GitHub Pages:
+Hosted on [GitHub Pages](https://terrypac.github.io/WebTools/):
 
 | Page | URL |
 |------|-----|
-| Home | [https://terrypac.github.io/IconTool/](https://terrypac.github.io/IconTool/) |
-| IconTool | [https://terrypac.github.io/IconTool/IconTool/](https://terrypac.github.io/IconTool/IconTool/) |
-| BannerTool | [https://terrypac.github.io/IconTool/BannerTool/](https://terrypac.github.io/IconTool/BannerTool/) |
+| Home | [https://terrypac.github.io/WebTools/](https://terrypac.github.io/WebTools/) |
+| IconTool | [https://terrypac.github.io/WebTools/IconTool/](https://terrypac.github.io/WebTools/IconTool/) |
+| BannerTool | [https://terrypac.github.io/WebTools/BannerTool/](https://terrypac.github.io/WebTools/BannerTool/) |
 | MeasurePng | [https://terrypac.github.io/MeasurePng/](https://terrypac.github.io/MeasurePng/) (external) |
-
-> **Note:** The repository is still named `IconTool`, so paths include `/IconTool/`. Renaming the repo to `WebTools` on GitHub would change the base URL to `https://terrypac.github.io/WebTools/`.
