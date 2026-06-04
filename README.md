@@ -14,9 +14,9 @@ Upload images, pick a color, adjust tolerance, optionally limit the area with a 
 
 Edit and preview Skia-style banner JSON for Galaxy S8 (and related `normal` / `ipad` configs). Paste or edit JSON, tweak the S8 section, and see a live CanvasKit render with bundled fonts.
 
-### [MeasurePng](https://terrypac.github.io/MeasurePng/) — PNG Transparent Area Measurement
+### [MeasureOverlay](https://terrypac.github.io/MeasurePng/) — Overlay Region Measurement
 
-Detect transparent areas in images, define printable regions with bleed, and export overlay coordinates. Hosted separately on GitHub Pages.
+Measure overlay regions on images, define printable areas with bleed, and export coordinates. Hosted separately on GitHub Pages — repository: [github.com/TerryPAC/MeasurePng](https://github.com/TerryPAC/MeasurePng).
 
 ## Project layout
 
@@ -52,4 +52,4 @@ Hosted on [GitHub Pages](https://terrypac.github.io/WebTools/):
 | Home | [https://terrypac.github.io/WebTools/](https://terrypac.github.io/WebTools/) |
 | IconTool | [https://terrypac.github.io/WebTools/IconTool/](https://terrypac.github.io/WebTools/IconTool/) |
 | BannerTool | [https://terrypac.github.io/WebTools/BannerTool/](https://terrypac.github.io/WebTools/BannerTool/) |
-| MeasurePng | [https://terrypac.github.io/MeasurePng/](https://terrypac.github.io/MeasurePng/) (external) |
+| MeasureOverlay | [https://terrypac.github.io/MeasurePng/](https://terrypac.github.io/MeasurePng/) ([repo](https://github.com/TerryPAC/MeasurePng)) (external) |
