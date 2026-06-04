@@ -15,6 +15,50 @@ const deviceScreen = document.getElementById('deviceScreen');
 
 let syncingFromFull = false;
 
+const LOG_PREFIX = '[BannerTool]';
+const toastContainer = document.getElementById('toastContainer');
+
+function logInfo(context, detail) {
+  if (detail !== undefined) {
+    console.info(`${LOG_PREFIX} ${context}`, detail);
+  } else {
+    console.info(`${LOG_PREFIX} ${context}`);
+  }
+}
+
+function logWarn(context, detail) {
+  if (detail !== undefined) {
+    console.warn(`${LOG_PREFIX} ${context}`, detail);
+  } else {
+    console.warn(`${LOG_PREFIX} ${context}`);
+  }
+}
+
+function logError(context, err) {
+  console.error(`${LOG_PREFIX} ${context}`, err instanceof Error ? err : new Error(String(err)));
+}
+
+function showToast(message, type = 'success', durationMs = 2800) {
+  if (!toastContainer || !message) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toastContainer.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.classList.add('toast-visible');
+  });
+
+  const remove = () => {
+    toast.classList.remove('toast-visible');
+    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+    setTimeout(() => toast.remove(), 300);
+  };
+
+  setTimeout(remove, durationMs);
+}
+
 function scaleInt(value) {
   return Math.round(Number(value) * SCALE_TO_NORMAL);
 }
@@ -101,20 +145,27 @@ function syncS8FromFull() {
   if (!raw) return;
   try {
     const data = JSON.parse(raw);
-    if (!Array.isArray(data.s8)) return;
+    if (!Array.isArray(data.s8)) {
+      logWarn('左侧 JSON 缺少 s8 数组，跳过同步');
+      return;
+    }
     syncingFromFull = true;
     s8Editor.value = JSON.stringify(data.s8, null, 2);
     syncingFromFull = false;
+    logInfo('已从完整 JSON 同步 s8 到编辑区');
     render();
-  } catch (_) {
-    /* 左侧 JSON 未就绪时不覆盖中间栏 */
+  } catch (e) {
+    logWarn('左侧 JSON 尚未就绪，跳过同步', e);
   }
 }
 
 async function applyUpdate() {
   const fullRaw = fullJsonEditor.value.trim();
   if (!fullRaw) {
-    setStatus('请先在左侧粘贴完整 JSON', true);
+    const msg = '请先在左侧粘贴完整 JSON';
+    setStatus(msg, true);
+    showToast(msg, 'error');
+    logWarn('Update 失败：左侧 JSON 为空');
     return;
   }
 
@@ -124,11 +175,17 @@ async function applyUpdate() {
     fullData = JSON.parse(fullRaw);
     s8Items = parseS8Editor();
     if (!s8Items) {
-      setStatus('中间栏 S8 为空', true);
+      const msg = '中间栏 S8 为空';
+      setStatus(msg, true);
+      showToast(msg, 'error');
+      logWarn('Update 失败：中间栏 S8 为空');
       return;
     }
   } catch (e) {
-    setStatus('JSON 解析失败: ' + e.message, true);
+    const msg = 'JSON 解析失败: ' + e.message;
+    setStatus(msg, true);
+    showToast('JSON 解析失败', 'error');
+    logError('Update JSON 解析失败', e);
     return;
   }
 
@@ -137,23 +194,40 @@ async function applyUpdate() {
   fullData.normal = s8ToNormal(s8Items);
 
   fullJsonEditor.value = JSON.stringify(fullData, null, 2);
-  await copyFullJson('更新成功，已复制完整 JSON');
+  logInfo('Update 成功，已合并 s8 / ipad / normal');
+  await copyFullJson('更新成功，已复制完整 JSON', '配置已更新并复制到剪贴板');
 }
 
-async function copyFullJson(successMsg = '已复制完整 JSON') {
+async function copyFullJson(statusMsg = '已复制完整 JSON', toastMsg = '已复制完整 JSON') {
   const text = fullJsonEditor.value;
   if (!text.trim()) {
-    setStatus('当前无可复制内容', true);
+    const msg = '当前无可复制内容';
+    setStatus(msg, true);
+    showToast(msg, 'error');
+    logWarn('复制失败：内容为空');
     return;
   }
   try {
     await navigator.clipboard.writeText(text);
-    setStatus(successMsg, false);
-  } catch (_) {
-    fullJsonEditor.select();
-    document.execCommand('copy');
-    window.getSelection()?.removeAllRanges();
-    setStatus(successMsg, false);
+    setStatus(statusMsg, false);
+    showToast(toastMsg, 'success');
+    logInfo('已复制完整 JSON 到剪贴板');
+  } catch (primaryErr) {
+    logWarn('Clipboard API 不可用，尝试 execCommand 回退', primaryErr);
+    try {
+      fullJsonEditor.select();
+      const ok = document.execCommand('copy');
+      window.getSelection()?.removeAllRanges();
+      if (!ok) throw new Error('execCommand copy 返回 false');
+      setStatus(statusMsg, false);
+      showToast(toastMsg, 'success');
+      logInfo('已通过 execCommand 复制完整 JSON');
+    } catch (fallbackErr) {
+      const msg = '复制失败，请手动复制';
+      setStatus(msg, true);
+      showToast(msg, 'error');
+      logError('复制到剪贴板失败', fallbackErr);
+    }
   }
 }
 
@@ -174,9 +248,11 @@ async function init() {
     s8Editor.addEventListener('input', debounce(() => {
       if (!syncingFromFull) render();
     }, 300));
+    logInfo('CanvasKit 初始化完成');
   } catch (e) {
-    console.error(e);
+    logError('CanvasKit 初始化失败', e);
     document.getElementById('loadingText').textContent = '初始化失败: ' + e.message;
+    showToast('初始化失败: ' + e.message, 'error', 5000);
   }
 }
 
@@ -190,7 +266,7 @@ async function getFont(name) {
     fontCache.set(name, buffer);
     return buffer;
   } catch (e) {
-    console.warn(`无法加载字体: ${name}`, e);
+    logWarn(`字体加载失败: ${name}`, e);
     return null;
   }
 }
@@ -223,10 +299,13 @@ async function render() {
       try {
         const full = JSON.parse(fullRaw);
         if (full.background?.color) bgColor = full.background.color;
-      } catch (_) {}
+      } catch (e) {
+        logWarn('读取左侧 background 颜色失败', e);
+      }
     }
   } catch (e) {
     setStatus('S8 JSON 语法错误', true);
+    logError('S8 JSON 语法错误', e);
     return;
   }
 
@@ -359,39 +438,52 @@ async function render() {
   canvas.style.width = '100%';
   canvas.style.height = 'auto';
 
-  const surface = CK.MakeCanvasSurface(canvas);
-  surface.drawOnce((skCanvas) => {
+  try {
+    const surface = CK.MakeCanvasSurface(canvas);
+    if (!surface) throw new Error('MakeCanvasSurface 返回 null');
 
-    const bg = data.background?.color || '#ffffff';
-    const paint = new CK.Paint();
-    paint.setColor(CK.parseColorString(bg));
-    skCanvas.drawRect(CK.LTRBRect(0, 0, S8_WIDTH, bannerHeight), paint);
+    surface.drawOnce((skCanvas) => {
 
-    let currentY = topPadding;
+      const bg = data.background?.color || '#ffffff';
+      const paint = new CK.Paint();
+      paint.setColor(CK.parseColorString(bg));
+      skCanvas.drawRect(CK.LTRBRect(0, 0, S8_WIDTH, bannerHeight), paint);
 
-    preBuilt.forEach((entry) => {
-      const topMargin = Number(entry.item.top_margin) || 0;
-      currentY += topMargin;
+      let currentY = topPadding;
 
-      if (entry.kind === 'line') {
-        const w = Number(entry.item.width) || 0;
-        const h = Math.max(RENDER_SCALE, (parseFloat(entry.item.height) || 1) * RENDER_SCALE);
-        const x = (S8_WIDTH - w) / 2;
-        paint.setColor(CK.parseColorString(entry.item.color || '#000000'));
-        skCanvas.drawRect(CK.LTRBRect(x, currentY, x + w, currentY + h), paint);
-        currentY += h;
-      } else {
-        skCanvas.drawParagraph(entry.para, 0, currentY + (entry.topAlignOffset || 0));
-        currentY += entry.para.getHeight();
-        entry.para.delete();
-      }
-      const bottomMargin = Number(entry.item.bottom_margin) || 0;
-      currentY += bottomMargin;
+      preBuilt.forEach((entry) => {
+        const topMargin = Number(entry.item.top_margin) || 0;
+        currentY += topMargin;
+
+        if (entry.kind === 'line') {
+          const w = Number(entry.item.width) || 0;
+          const h = Math.max(RENDER_SCALE, (parseFloat(entry.item.height) || 1) * RENDER_SCALE);
+          const x = (S8_WIDTH - w) / 2;
+          paint.setColor(CK.parseColorString(entry.item.color || '#000000'));
+          skCanvas.drawRect(CK.LTRBRect(x, currentY, x + w, currentY + h), paint);
+          currentY += h;
+        } else {
+          skCanvas.drawParagraph(entry.para, 0, currentY + (entry.topAlignOffset || 0));
+          currentY += entry.para.getHeight();
+          entry.para.delete();
+        }
+        const bottomMargin = Number(entry.item.bottom_margin) || 0;
+        currentY += bottomMargin;
+      });
+      paint.delete();
     });
-    paint.delete();
-  });
 
-  setStatus('渲染完成', false);
+    setStatus('渲染完成', false);
+    logInfo('预览渲染完成', { items: items.length, height: bannerHeight });
+  } catch (e) {
+    setStatus('渲染失败', true);
+    logError('预览渲染失败', e);
+    preBuilt.forEach((entry) => {
+      if (entry.kind === 'text' && entry.para) {
+        try { entry.para.delete(); } catch (_) {}
+      }
+    });
+  }
 }
 
 function debounce(fn, ms) {

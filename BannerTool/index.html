@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <title>Skia Banner Preview (Galaxy S8)</title>
+  <title>Android Live Banner Tool</title>
   <link rel="preload" href="vendor/canvaskit/canvaskit.wasm" as="fetch" type="application/wasm" crossorigin>
   <link rel="preload" href="vendor/canvaskit/canvaskit.js" as="script">
   <style>
@@ -12,6 +12,9 @@
     :root {
       --preview-screen-width: 360px;
       --preview-gutter: 24px;
+      --preview-aspect-w: 1440;
+      --preview-aspect-h: 2960;
+      --preview-screen-height: calc(var(--preview-screen-width) * var(--preview-aspect-h) / var(--preview-aspect-w));
       --preview-panel-width: calc(var(--preview-screen-width) + 2 * var(--preview-gutter));
     }
     body {
@@ -55,9 +58,12 @@
     }
     main {
       flex: 1;
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--preview-panel-width);
+      grid-template-rows: minmax(0, 1fr);
       overflow: auto;
       min-height: 0;
+      min-width: 0;
       gap: 12px;
       padding: 12px;
     }
@@ -65,15 +71,20 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
+      min-height: 0;
       border: 1px solid rgba(148, 163, 184, 0.18);
       border-radius: 14px;
       background: linear-gradient(165deg, rgba(15, 23, 42, 0.86), rgba(30, 41, 59, 0.72));
       box-shadow: 0 10px 30px rgba(2, 6, 23, 0.35);
       overflow: hidden;
     }
-    .panel-source,
+    .panel-source {
+      grid-column: 1;
+      grid-row: 1;
+    }
     .panel-edit {
-      flex: 1 1 0;
+      grid-column: 2;
+      grid-row: 1;
     }
     .panel-header {
       padding: 11px 14px;
@@ -181,9 +192,11 @@
       box-shadow: inset 0 0 0 2px rgba(96, 165, 250, 0.55);
     }
     #previewPanel {
-      flex: 0 0 var(--preview-panel-width);
+      grid-column: 3;
+      grid-row: 1;
       width: var(--preview-panel-width);
       min-width: var(--preview-panel-width);
+      max-width: var(--preview-panel-width);
       min-height: 0;
     }
     #previewContainer {
@@ -194,22 +207,21 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
-      overflow: hidden;
+      overflow: auto;
       padding: var(--preview-gutter);
     }
     .preview-fit {
-      flex: 1;
-      min-height: 0;
+      flex: 0 0 auto;
       width: 100%;
-      container-type: size;
+      min-height: var(--preview-screen-height);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
     }
     .preview-frame {
-      aspect-ratio: 1440 / 2960;
-      width: min(var(--preview-screen-width), 100cqw, calc(100cqh * 1440 / 2960));
-      max-height: 100cqh;
+      width: var(--preview-screen-width);
+      height: var(--preview-screen-height);
+      aspect-ratio: var(--preview-aspect-w) / var(--preview-aspect-h);
       background: #ffffff;
       border: 1px solid rgba(148, 163, 184, 0.28);
       border-radius: 10px;
@@ -293,27 +305,76 @@
       text-align: center;
       padding: 20px;
     }
-    @media (max-width: 1280px) {
+    @media (max-width: 880px) {
       main {
-        flex-direction: column;
+        grid-template-columns: minmax(0, 1fr) var(--preview-panel-width);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+        min-width: calc(var(--preview-panel-width) + 240px + 24px);
       }
-      .panel-source,
+      .panel-source {
+        grid-column: 1;
+        grid-row: 1;
+      }
       .panel-edit {
-        flex: 1 1 auto;
-        min-height: 320px;
+        grid-column: 1;
+        grid-row: 2;
       }
       #previewPanel {
-        flex: 0 0 auto;
-        width: 100%;
-        min-width: 0;
-        max-width: var(--preview-panel-width);
-        align-self: center;
+        grid-column: 2;
+        grid-row: 1 / -1;
       }
     }
     @media (prefers-reduced-motion: reduce) {
       .btn {
         transition: none;
       }
+      .toast {
+        transition: none;
+      }
+    }
+    .toast-container {
+      position: fixed;
+      bottom: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      max-width: min(420px, calc(100vw - 32px));
+    }
+    .toast {
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+      box-shadow: 0 8px 24px rgba(2, 6, 23, 0.45);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 220ms ease, transform 220ms ease;
+      pointer-events: auto;
+    }
+    .toast-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toast-success {
+      background: rgba(20, 83, 45, 0.95);
+      border: 1px solid rgba(74, 222, 128, 0.5);
+      color: #bbf7d0;
+    }
+    .toast-error {
+      background: rgba(127, 29, 29, 0.95);
+      border: 1px solid rgba(248, 113, 113, 0.5);
+      color: #fecaca;
+    }
+    .toast-info {
+      background: rgba(30, 58, 138, 0.95);
+      border: 1px solid rgba(96, 165, 250, 0.5);
+      color: #bfdbfe;
     }
   </style>
 </head>
@@ -325,7 +386,7 @@
 </div>
 
 <header>
-  <strong class="brand">Live Banner Tool</strong>
+  <strong class="brand">Android Live Banner Tool</strong>
   <span class="status" id="statusText">等待输入 JSON...</span>
 </header>
 
@@ -362,11 +423,11 @@
     <textarea id="s8Editor" class="json-textarea" placeholder="从左侧解析的 s8 数组，在此编辑..." spellcheck="false"></textarea>
   </div>
   <div class="panel" id="previewPanel">
-    <div class="panel-header">预览 <span>— S8 · 1440×2960 / 360×740 dp</span></div>
+    <div class="panel-header">预览 <span>— 1440×2960 / 360×740 dp</span></div>
     <div id="previewContainer">
       <div class="preview-fit">
         <div class="preview-frame" id="deviceScreen">
-          <div id="emptyPlaceholder" class="empty-state">请在中间栏编辑 S8 JSON 以预览</div>
+          <div id="emptyPlaceholder" class="empty-state">请在中间栏编辑 JSON 以预览</div>
           <canvas id="skCanvas" style="display:none"></canvas>
         </div>
       </div>
@@ -378,6 +439,8 @@
   <button class="btn btn-primary" id="updateBtn" onclick="applyUpdate()">Update</button>
   <span class="hint">应用当前编辑并更新配置</span>
 </footer>
+
+<div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
 <script src="vendor/canvaskit/canvaskit.js"></script>
 <script src="app.js"></script>
