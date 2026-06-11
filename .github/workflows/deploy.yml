@@ -1,0 +1,86 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect ImageCompress changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            imagecompress:
+              - 'ImageCompress/**'
+
+      - name: Restore ImageCompress dist cache
+        uses: actions/cache@v4
+        id: dist-cache
+        with:
+          path: ImageCompress/dist
+          key: imagecompress-dist-${{ hashFiles('ImageCompress/package-lock.json', 'ImageCompress/**/*.ts', 'ImageCompress/**/*.tsx', 'ImageCompress/**/*.css', 'ImageCompress/index.html', 'ImageCompress/vite.config.ts', 'ImageCompress/tsconfig*.json') }}
+
+      - name: Setup Node
+        if: steps.changes.outputs.imagecompress == 'true' || steps.dist-cache.outputs.cache-hit != 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ImageCompress/package-lock.json
+
+      - name: Install dependencies
+        if: steps.changes.outputs.imagecompress == 'true' || steps.dist-cache.outputs.cache-hit != 'true' || github.event_name == 'workflow_dispatch'
+        working-directory: ImageCompress
+        run: npm ci
+
+      - name: Build ImageCompress
+        if: steps.changes.outputs.imagecompress == 'true' || steps.dist-cache.outputs.cache-hit != 'true' || github.event_name == 'workflow_dispatch'
+        working-directory: ImageCompress
+        env:
+          VITE_BASE: /WebTools/ImageCompress/
+        run: npm run build
+
+      - name: Verify ImageCompress dist
+        run: test -d ImageCompress/dist && test -n "$(ls -A ImageCompress/dist)"
+
+      - name: Prepare site
+        run: |
+          mkdir -p _site/ImageCompress
+          cp index.html favicon.svg _site/
+          cp -r IconTool BannerTool _site/
+          cp -r ImageCompress/dist/* _site/ImageCompress/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
