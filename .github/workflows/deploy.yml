@@ -37,7 +37,7 @@ jobs:
         id: dist-cache
         with:
           path: ImageCompress/dist
-          key: imagecompress-dist-${{ hashFiles('ImageCompress/package-lock.json', 'ImageCompress/**/*.ts', 'ImageCompress/**/*.tsx', 'ImageCompress/**/*.css', 'ImageCompress/index.html', 'ImageCompress/vite.config.ts', 'ImageCompress/tsconfig*.json') }}
+          key: imagecompress-dist-${{ hashFiles('ImageCompress/package-lock.json', 'ImageCompress/**/*.ts', 'ImageCompress/**/*.tsx', 'ImageCompress/**/*.css', 'ImageCompress/index.vite.html', 'ImageCompress/vite.config.ts', 'ImageCompress/tsconfig*.json') }}
 
       - name: Setup Node
         if: steps.changes.outputs.imagecompress == 'true' || steps.dist-cache.outputs.cache-hit != 'true' || github.event_name == 'workflow_dispatch'
