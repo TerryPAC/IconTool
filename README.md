@@ -35,7 +35,7 @@ Measure overlay regions on images, define printable areas with bleed, and export
 │   └── README.md
 ├── BannerTool/
 │   ├── index.html
-│   ├── app.js
+│   ├── js/               # ES modules（main、renderer、banner-data 等）
 │   ├── vendor/canvaskit/
 │   ├── fonts/
 │   └── README.md

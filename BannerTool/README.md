@@ -70,8 +70,16 @@
 
 ```
 BannerTool/
-├── index.html      # 单页应用（UI + 逻辑 + 渲染）
-├── app.js          # 编辑、同步、CanvasKit 渲染
+├── index.html      # 单页 UI
+├── js/
+│   ├── main.js         # 入口：初始化、事件绑定、Update/复制
+│   ├── banner-data.js  # JSON 解析与 s8 → ipad/normal 同步
+│   ├── renderer.js     # CanvasKit 预览渲染
+│   ├── fonts.js        # 字体解析与加载
+│   ├── ui.js           # 状态栏与 Toast
+│   ├── logger.js       # 控制台日志
+│   ├── utils.js        # debounce、deepClone 等
+│   └── constants.js    # 布局与缩放常量
 ├── vendor/canvaskit/  # 自托管 CanvasKit 0.39.1 full（canvaskit.js + canvaskit.wasm）
 ├── fonts/          #  bundled 字体（与 JSON 中 font 字段文件名对应）
 └── README.md

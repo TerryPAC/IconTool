@@ -7,7 +7,6 @@
   <link rel="preload" href="vendor/canvaskit/canvaskit.wasm" as="fetch" type="application/wasm" crossorigin>
   <link rel="preload" href="vendor/canvaskit/canvaskit.js" as="script">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
     * { box-sizing: border-box; }
     :root {
       --preview-screen-width: 360px;
@@ -25,7 +24,7 @@
         radial-gradient(1000px 520px at 85% 0%, rgba(99, 102, 241, 0.18), transparent 58%),
         #0f172a;
       color: #f8fafc;
-      font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -178,7 +177,7 @@
       color: #e2e8f0;
       border: none;
       padding: 14px 14px 16px;
-      font-family: 'JetBrains Mono', 'SF Mono', monospace;
+      font-family: "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, "Liberation Mono", Menlo, monospace;
       font-size: 12px;
       resize: none;
       outline: none;
@@ -398,7 +397,7 @@
           <span style="color:#cbd5e1;font-weight:600;">完整 JSON</span>
           <span>— s8 + ipad + normal</span>
         </div>
-        <button class="copy-icon-btn" onclick="copyFullJson()" title="复制完整 JSON" aria-label="复制完整 JSON">
+        <button class="copy-icon-btn" title="复制完整 JSON" aria-label="复制完整 JSON">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="9" y="9" width="10" height="10" rx="2"></rect>
             <rect x="5" y="5" width="10" height="10" rx="2"></rect>
@@ -436,14 +435,14 @@
 </main>
 
 <footer>
-  <button class="btn btn-primary" id="updateBtn" onclick="applyUpdate()">Update</button>
+  <button class="btn btn-primary" id="updateBtn">Update</button>
   <span class="hint">应用当前编辑并更新配置</span>
 </footer>
 
 <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
 <script src="vendor/canvaskit/canvaskit.js"></script>
-<script src="app.js"></script>
+<script type="module" src="js/main.js"></script>
 
 </body>
 </html>
