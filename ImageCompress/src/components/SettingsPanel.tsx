@@ -9,13 +9,13 @@ interface Props {
 }
 
 const MODES: { id: CompressMode; label: string; desc: string; icon: string }[] = [
-  { id: 'lossy', label: '有损', desc: '体积最小', icon: '📉' },
-  { id: 'lossless', label: '无损', desc: '零损失', icon: '✨' },
-  { id: 'webp', label: 'WebP', desc: '现代格式', icon: '🌐' },
+  { id: 'lossy', label: 'Lossy', desc: 'Smallest', icon: '📉' },
+  { id: 'lossless', label: 'Lossless', desc: 'No loss', icon: '✨' },
+  { id: 'webp', label: 'WebP', desc: 'Modern', icon: '🌐' },
 ]
 
 const OUTPUT_FORMATS: { id: OutputFormat; label: string }[] = [
-  { id: 'original', label: '原格式' },
+  { id: 'original', label: 'Original' },
   { id: 'webp', label: 'WebP' },
   { id: 'jpg', label: 'JPG' },
   { id: 'png', label: 'PNG' },
@@ -66,7 +66,7 @@ export function SettingsPanel({ settings, onChange, referenceSize }: Props) {
     <aside className="glass rounded-2xl p-5 flex flex-col gap-6 w-full lg:w-64 shrink-0 lg:sticky lg:top-6">
       {/* 压缩模式 */}
       <div>
-        <SectionTitle>压缩模式</SectionTitle>
+        <SectionTitle>Mode</SectionTitle>
         <div className="grid grid-cols-3 lg:grid-cols-1 gap-2">
           {MODES.map((m) => {
             const active = settings.mode === m.id
@@ -95,9 +95,9 @@ export function SettingsPanel({ settings, onChange, referenceSize }: Props) {
       {/* 质量滑块 */}
       {showQuality && (
         <div>
-          <SectionTitle>压缩质量</SectionTitle>
+          <SectionTitle>Quality</SectionTitle>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-zinc-500">低质量 / 小体积</span>
+            <span className="text-xs text-zinc-500">Low / small</span>
             <span className="font-mono text-sm font-semibold text-emerald-400 tabular-nums">{settings.quality}</span>
           </div>
           <input
@@ -118,10 +118,10 @@ export function SettingsPanel({ settings, onChange, referenceSize }: Props) {
 
       {/* 尺寸缩放 */}
       <div>
-        <SectionTitle>尺寸缩放</SectionTitle>
+        <SectionTitle>Resize</SectionTitle>
         <label className="flex items-center justify-between cursor-pointer mb-3 select-none">
           <span className={`text-sm font-medium ${settings.resizeEnabled ? 'text-zinc-200' : 'text-zinc-500'}`}>
-            启用缩放
+            Enable
           </span>
           <div
             role="switch"
@@ -136,11 +136,11 @@ export function SettingsPanel({ settings, onChange, referenceSize }: Props) {
           <div className="flex flex-col gap-3 select-none">
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-[10px] text-zinc-500 block mb-1.5 font-medium">宽度 px</label>
+                <label className="text-[10px] text-zinc-500 block mb-1.5 font-medium">W</label>
                 <input
                   type="number"
                   min={1}
-                  placeholder="自动"
+                  placeholder="Auto"
                   value={settings.resizeWidth}
                   onChange={(e) => handleWidthChange(e.target.value)}
                   onBlur={() => syncPairedDimension('width')}
@@ -149,11 +149,11 @@ export function SettingsPanel({ settings, onChange, referenceSize }: Props) {
               </div>
               <span className="text-zinc-600 mt-5 font-light">×</span>
               <div className="flex-1">
-                <label className="text-[10px] text-zinc-500 block mb-1.5 font-medium">高度 px</label>
+                <label className="text-[10px] text-zinc-500 block mb-1.5 font-medium">H</label>
                 <input
                   type="number"
                   min={1}
-                  placeholder="自动"
+                  placeholder="Auto"
                   value={settings.resizeHeight}
                   onChange={(e) => handleHeightChange(e.target.value)}
                   onBlur={() => syncPairedDimension('height')}
@@ -168,7 +168,7 @@ export function SettingsPanel({ settings, onChange, referenceSize }: Props) {
                 onChange={(e) => set({ lockAspectRatio: e.target.checked })}
                 className="w-4 h-4 rounded accent-emerald-400 cursor-pointer"
               />
-              <span className="text-xs text-zinc-400 group-hover:text-zinc-300 transition-colors">锁定长宽比</span>
+              <span className="text-xs text-zinc-400 group-hover:text-zinc-300 transition-colors">Lock ratio</span>
             </label>
           </div>
         )}
@@ -177,7 +177,7 @@ export function SettingsPanel({ settings, onChange, referenceSize }: Props) {
       {/* 输出格式 */}
       {showOutputFormat && (
         <div>
-          <SectionTitle>输出格式</SectionTitle>
+          <SectionTitle>Format</SectionTitle>
           <div className="flex flex-wrap gap-1.5">
             {OUTPUT_FORMATS.map((f) => {
               const active = settings.outputFormat === f.id

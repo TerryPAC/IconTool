@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -381,12 +381,12 @@
 
 <div id="loadingOverlay">
   <div class="spinner"></div>
-  <div id="loadingText">正在初始化 Skia (CanvasKit)...</div>
+  <div id="loadingText">Loading Skia…</div>
 </div>
 
 <header>
   <strong class="brand">Android Live Banner Tool</strong>
-  <span class="status" id="statusText">等待输入 JSON...</span>
+  <span class="status" id="statusText">Awaiting JSON…</span>
 </header>
 
 <main>
@@ -394,10 +394,10 @@
     <div class="panel-header">
       <div class="panel-header-row">
         <div class="panel-header-left">
-          <span style="color:#cbd5e1;font-weight:600;">完整 JSON</span>
+          <span style="color:#cbd5e1;font-weight:600;">Full JSON</span>
           <span>— s8 + ipad + normal</span>
         </div>
-        <button class="copy-icon-btn" title="复制完整 JSON" aria-label="复制完整 JSON">
+        <button class="copy-icon-btn" title="Copy" aria-label="Copy">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="9" y="9" width="10" height="10" rx="2"></rect>
             <rect x="5" y="5" width="10" height="10" rx="2"></rect>
@@ -405,28 +405,28 @@
         </button>
       </div>
     </div>
-    <div class="panel-note">源数据区：用于粘贴与查看完整配置</div>
-    <textarea id="fullJsonEditor" class="json-textarea" placeholder="粘贴完整 banner.json（含 normal、ipad、s8）..." spellcheck="false"></textarea>
+    <div class="panel-note">Paste full config here</div>
+    <textarea id="fullJsonEditor" class="json-textarea" placeholder="banner.json (normal, ipad, s8)…" spellcheck="false"></textarea>
   </div>
   <div class="panel panel-edit">
     <div class="panel-header">
       <div class="panel-header-row">
         <div class="panel-header-left">
-          <span style="color:#dcfce7;font-weight:700;">编辑</span>
-          <span>— 生效编辑区</span>
+          <span style="color:#dcfce7;font-weight:700;">Edit</span>
+          <span>— S8</span>
         </div>
         <span class="effective-badge">Effective</span>
       </div>
     </div>
-    <div class="panel-note">仅中间编辑框的修改会作为有效内容参与更新</div>
-    <textarea id="s8Editor" class="json-textarea" placeholder="从左侧解析的 s8 数组，在此编辑..." spellcheck="false"></textarea>
+    <div class="panel-note">Middle editor applies on Update</div>
+    <textarea id="s8Editor" class="json-textarea" placeholder="Edit s8 array…" spellcheck="false"></textarea>
   </div>
   <div class="panel" id="previewPanel">
-    <div class="panel-header">预览 <span>— 1440×2960 / 360×740 dp</span></div>
+    <div class="panel-header">Preview <span>— 1440×2960 / 360×740 dp</span></div>
     <div id="previewContainer">
       <div class="preview-fit">
         <div class="preview-frame" id="deviceScreen">
-          <div id="emptyPlaceholder" class="empty-state">请在中间栏编辑 JSON 以预览</div>
+          <div id="emptyPlaceholder" class="empty-state">Edit JSON to preview</div>
           <canvas id="skCanvas" style="display:none"></canvas>
         </div>
       </div>
@@ -436,7 +436,7 @@
 
 <footer>
   <button class="btn btn-primary" id="updateBtn">Update</button>
-  <span class="hint">应用当前编辑并更新配置</span>
+  <span class="hint">Apply edits</span>
 </footer>
 
 <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>

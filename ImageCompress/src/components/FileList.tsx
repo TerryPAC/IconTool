@@ -30,12 +30,12 @@ export function FileList({ files, onAddFiles, onRemove, onPreview, onClear }: Pr
       {/* Header */}
       <div className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-white/8">
         <div className="flex items-center gap-2.5 min-w-0">
-          <h2 className="text-sm font-semibold text-zinc-200">文件列表</h2>
+          <h2 className="text-sm font-semibold text-zinc-200">Files</h2>
           <span className="font-mono text-[11px] text-zinc-400 bg-white/5 border border-white/8 rounded-full px-2 py-0.5 tabular-nums">
             {files.length}
           </span>
           {processingCount > 0 && (
-            <span className="text-[11px] text-cyan-400 animate-pulse">处理中…</span>
+            <span className="text-[11px] text-cyan-400 animate-pulse">Processing…</span>
           )}
         </div>
 
@@ -60,7 +60,7 @@ export function FileList({ files, onAddFiles, onRemove, onPreview, onClear }: Pr
           onClick={onClear}
           className="text-xs text-zinc-500 hover:text-red-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-red-400/10"
         >
-          清空
+          Clear
         </button>
       </div>
 

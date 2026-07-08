@@ -21,7 +21,7 @@ export function parseS8Text(raw) {
   const parsed = JSON.parse(raw);
   if (Array.isArray(parsed)) return parsed;
   if (parsed && Array.isArray(parsed.s8)) return parsed.s8;
-  throw new Error('S8 须为 JSON 数组');
+  throw new Error('S8 must be array');
 }
 
 export function extractS8FromFullJson(raw) {

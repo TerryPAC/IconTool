@@ -47,7 +47,7 @@ function syncS8FromFull() {
 async function applyUpdate() {
   const fullRaw = getFullRaw().trim();
   if (!fullRaw) {
-    const msg = '请先在左侧粘贴完整 JSON';
+    const msg = 'Paste JSON first';
     setStatus(msg, true);
     showToast(msg, 'error');
     logWarn('Update 失败：左侧 JSON 为空');
@@ -60,29 +60,29 @@ async function applyUpdate() {
     fullData = JSON.parse(fullRaw);
     s8Items = parseS8Text(getS8Raw().trim());
     if (!s8Items) {
-      const msg = '中间栏 S8 为空';
+      const msg = 'S8 empty';
       setStatus(msg, true);
       showToast(msg, 'error');
       logWarn('Update 失败：中间栏 S8 为空');
       return;
     }
   } catch (e) {
-    const msg = 'JSON 解析失败: ' + e.message;
+    const msg = 'Parse error: ' + e.message;
     setStatus(msg, true);
-    showToast('JSON 解析失败', 'error');
+    showToast('Parse error', 'error');
     logError('Update JSON 解析失败', e);
     return;
   }
 
   fullJsonEditor.value = JSON.stringify(mergeBannerUpdate(fullData, s8Items), null, 2);
   logInfo('Update 成功，已合并 s8 / ipad / normal');
-  await copyFullJson('更新成功，已复制完整 JSON', '配置已更新并复制到剪贴板');
+  await copyFullJson('Updated & copied', 'Updated');
 }
 
-async function copyFullJson(statusMsg = '已复制完整 JSON', toastMsg = '已复制完整 JSON') {
+async function copyFullJson(statusMsg = 'Copied', toastMsg = 'Copied') {
   const text = getFullRaw();
   if (!text.trim()) {
-    const msg = '当前无可复制内容';
+    const msg = 'Empty';
     setStatus(msg, true);
     showToast(msg, 'error');
     logWarn('复制失败：内容为空');
@@ -104,7 +104,7 @@ async function copyFullJson(statusMsg = '已复制完整 JSON', toastMsg = '已�
       showToast(toastMsg, 'success');
       logInfo('已通过 execCommand 复制完整 JSON');
     } catch (fallbackErr) {
-      const msg = '复制失败，请手动复制';
+      const msg = 'Copy failed';
       setStatus(msg, true);
       showToast(msg, 'error');
       logError('复制到剪贴板失败', fallbackErr);
@@ -136,8 +136,8 @@ async function init() {
     logInfo('CanvasKit 初始化完成');
   } catch (e) {
     logError('CanvasKit 初始化失败', e);
-    document.getElementById('loadingText').textContent = '初始化失败: ' + e.message;
-    showToast('初始化失败: ' + e.message, 'error', 5000);
+    document.getElementById('loadingText').textContent = 'Init failed: ' + e.message;
+    showToast('Init failed', 'error', 5000);
   }
 }
 

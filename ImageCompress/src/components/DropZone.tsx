@@ -51,7 +51,7 @@ export function DropZone({ onFiles, compact }: Props) {
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        添加
+        Add
         <input
           ref={inputRef}
           type="file"
@@ -69,7 +69,7 @@ export function DropZone({ onFiles, compact }: Props) {
     <div
       role="button"
       tabIndex={0}
-      aria-label="上传图片"
+      aria-label="Upload"
       className={`group relative flex flex-col items-center justify-center gap-5 rounded-2xl cursor-pointer transition-all duration-300 py-16 px-8
         ${dragging
           ? 'border-2 border-emerald-400/60 bg-emerald-400/8 scale-[1.01]'
@@ -98,9 +98,9 @@ export function DropZone({ onFiles, compact }: Props) {
 
       <div className="text-center">
         <p className="text-lg font-semibold text-zinc-100">
-          {dragging ? '松开即可上传' : '拖拽图片到这里，或点击选择'}
+          {dragging ? 'Drop' : 'Drop or click'}
         </p>
-        <p className="text-sm text-zinc-500 mt-2">支持多选，一次处理多张图片</p>
+        <p className="text-sm text-zinc-500 mt-2">Multiple files</p>
         <div className="flex flex-wrap justify-center gap-2 mt-4">
           {FORMATS.map((fmt) => (
             <span key={fmt} className="text-[11px] font-mono font-medium text-zinc-500 bg-white/5 border border-white/8 rounded-md px-2 py-0.5">

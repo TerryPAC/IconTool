@@ -18,9 +18,9 @@ const DEFAULT_SETTINGS: GlobalSettings = {
 }
 
 const FEATURES = [
-  { icon: '⚡', title: '极速压缩', desc: '浏览器本地处理，无需上传' },
-  { icon: '🔒', title: '隐私安全', desc: '图片不离开你的设备' },
-  { icon: '📦', title: '批量导出', desc: '一键打包 ZIP 下载' },
+  { icon: '⚡', title: 'Fast', desc: 'Local, no upload' },
+  { icon: '🔒', title: 'Private', desc: 'Stays on device' },
+  { icon: '📦', title: 'Batch ZIP', desc: 'One-click export' },
 ]
 
 let idCounter = 0
@@ -154,13 +154,13 @@ export default function App() {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">ImageCompress</h1>
-                <p className="text-sm text-zinc-500 mt-0.5">批量压缩 · WebP 转换 · 尺寸调整</p>
+                <p className="text-sm text-zinc-500 mt-0.5">Compress · WebP · Resize</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400/90 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-3 py-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                纯前端 · 隐私安全
+                Local · Private
               </span>
             </div>
           </div>
@@ -216,7 +216,7 @@ export default function App() {
         )}
 
         <footer className="mt-auto pt-4 text-center text-xs text-zinc-600">
-          图片在浏览器本地处理，不上传任何服务器
+          Local only — never uploaded
         </footer>
       </div>
 

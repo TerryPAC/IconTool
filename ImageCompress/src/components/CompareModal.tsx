@@ -123,7 +123,7 @@ export function CompareModal({ item, onClose }: Props) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="对比预览"
+      aria-label="Compare"
     >
       <div
         className="glass-strong rounded-2xl overflow-hidden flex flex-col w-full shadow-2xl"
@@ -145,7 +145,7 @@ export function CompareModal({ item, onClose }: Props) {
             type="button"
             onClick={onClose}
             className="p-2 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-white/8 transition-colors"
-            aria-label="关闭"
+            aria-label="Close"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -175,7 +175,7 @@ export function CompareModal({ item, onClose }: Props) {
             >
               <img
                 src={item.previewUrl}
-                alt="原图"
+                alt="Original"
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 draggable={false}
               />
@@ -183,7 +183,7 @@ export function CompareModal({ item, onClose }: Props) {
               {item.outputPreviewUrl && (
                 <img
                   src={item.outputPreviewUrl}
-                  alt="压缩后"
+                  alt="Compressed"
                   className="absolute inset-0 w-full h-full pointer-events-none"
                   draggable={false}
                   style={{ clipPath: `inset(0 0 0 ${splitPercent}%)` }}
@@ -222,16 +222,16 @@ export function CompareModal({ item, onClose }: Props) {
 
               {/* 标签 */}
               <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[10px] font-medium text-white/85 pointer-events-none border border-white/10">
-                原图
+                Orig
               </div>
               <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[10px] font-medium text-white/85 pointer-events-none border border-white/10">
-                压缩后
+                Out
               </div>
             </div>
           )}
 
           <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-zinc-500 pointer-events-none">
-            拖动分割线对比
+            Drag to compare
           </p>
         </div>
       </div>

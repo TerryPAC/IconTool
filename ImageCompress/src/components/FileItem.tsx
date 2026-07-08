@@ -11,7 +11,7 @@ function StatusBadge({ status, errorMessage }: { status: ImageFile['status']; er
   if (status === 'pending') {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] text-zinc-500 bg-white/5 rounded-full px-2 py-0.5">
-        等待
+        Wait
       </span>
     )
   }
@@ -22,14 +22,14 @@ function StatusBadge({ status, errorMessage }: { status: ImageFile['status']; er
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
         </svg>
-        处理中
+        Busy
       </span>
     )
   }
   if (status === 'error') {
     return (
       <span className="text-[11px] text-red-400 bg-red-400/10 rounded-full px-2 py-0.5" title={errorMessage}>
-        失败
+        Failed
       </span>
     )
   }
@@ -114,7 +114,7 @@ export function FileItem({ item, onRemove, onPreview }: Props) {
           <>
             <button
               type="button"
-              title="对比预览"
+              title="Compare"
               onClick={() => onPreview(item)}
               className="p-2 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/8 transition-colors"
             >
@@ -125,7 +125,7 @@ export function FileItem({ item, onRemove, onPreview }: Props) {
             </button>
             <button
               type="button"
-              title="下载"
+              title="Download"
               onClick={() => downloadSingle(item)}
               className="p-2 rounded-lg text-zinc-500 hover:text-emerald-400 hover:bg-emerald-400/10 transition-colors"
             >
@@ -137,7 +137,7 @@ export function FileItem({ item, onRemove, onPreview }: Props) {
         )}
         <button
           type="button"
-          title="移除"
+          title="Remove"
           onClick={() => onRemove(item.id)}
           className="p-2 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-400/10 transition-colors"
         >

@@ -113,7 +113,7 @@ export function createRenderer(CK, elements) {
     if (!rawValue) {
       canvas.style.display = 'none';
       emptyPlaceholder.style.display = 'flex';
-      setStatusNeutral('等待 S8 JSON...');
+      setStatusNeutral('Awaiting S8…');
       deviceScreen.style.backgroundColor = '#f0f0f0';
       return;
     }
@@ -123,14 +123,14 @@ export function createRenderer(CK, elements) {
     try {
       ({ items, bgColor } = parsePreviewInput(rawValue, fullRaw?.trim() || ''));
     } catch (e) {
-      setStatus('S8 JSON 语法错误', true);
+      setStatus('S8 syntax error', true);
       logError('S8 JSON 语法错误', e);
       return;
     }
 
     canvas.style.display = 'block';
     emptyPlaceholder.style.display = 'none';
-    setStatusNeutral('正在渲染...');
+    setStatusNeutral('Rendering…');
     deviceScreen.style.backgroundColor = bgColor;
 
     if (fontMgr) fontMgr.delete();
@@ -150,7 +150,7 @@ export function createRenderer(CK, elements) {
 
     try {
       const surface = CK.MakeCanvasSurface(canvas);
-      if (!surface) throw new Error('MakeCanvasSurface 返回 null');
+      if (!surface) throw new Error('MakeCanvasSurface returned null');
 
       surface.drawOnce((skCanvas) => {
         const paint = new CK.Paint();
@@ -181,10 +181,10 @@ export function createRenderer(CK, elements) {
         paint.delete();
       });
 
-      setStatus('渲染完成', false);
+      setStatus('Done', false);
       logInfo('预览渲染完成', { items: items.length, height: bannerHeight });
     } catch (e) {
-      setStatus('渲染失败', true);
+      setStatus('Failed', true);
       logError('预览渲染失败', e);
       deleteParagraphs(preBuilt);
     }

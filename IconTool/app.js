@@ -133,10 +133,10 @@
     if (msg) {
       rectStatus.textContent = msg;
     } else if (rectDrawMode) {
-      rectStatus.textContent = "在选中图片上拖拽绘制矩形…";
+      rectStatus.textContent = "Drag to draw…";
     } else {
       const totalRects = images.reduce((sum, i) => sum + i.rects.length, 0);
-      rectStatus.textContent = totalRects > 0 ? `共 ${totalRects} 个限定框` : "";
+      rectStatus.textContent = totalRects > 0 ? `${totalRects} region${totalRects > 1 ? "s" : ""}` : "";
     }
   }
 
@@ -236,7 +236,7 @@
       const r = item.rects[idx];
       const btn = document.createElement("button");
       btn.className = "btn-delete-rect";
-      btn.title = "删除限定框";
+      btn.title = "Delete region";
       btn.innerHTML = `<svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M3.5 3.5L10.5 10.5M10.5 3.5L3.5 10.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>`;
@@ -331,9 +331,9 @@
       total += item.selectionCount;
     }
     if (!pickedColor || images.length === 0) {
-      selectionStats.textContent = "已选中像素：—";
+      selectionStats.textContent = "Pixels: —";
     } else {
-      selectionStats.textContent = `已选中像素：${total.toLocaleString()}（${images.length} 张图）`;
+      selectionStats.textContent = `Pixels: ${total.toLocaleString()} · ${images.length} img`;
     }
     updateReplaceButton();
   }
@@ -350,7 +350,7 @@
   function updatePickedUI() {
     if (!pickedColor) {
       pickedSwatch.style.background = "";
-      pickedHex.textContent = "未取色";
+      pickedHex.textContent = "None";
       pickedRgb.textContent = "—";
       btnReplace.disabled = true;
       btnCancelPick.style.display = "none";
@@ -456,7 +456,7 @@
         item.rects.push(n);
         committed = true;
       } else {
-        msg = "框选过小，已忽略";
+        msg = "Too small";
       }
     }
 
@@ -470,8 +470,8 @@
     btnDrawRect.disabled = false;
     updateRectUI(msg);
     modeHint.textContent = committed
-      ? "已追加限定范围。可继续取色或再绘制矩形框"
-      : "请在图片上点击取色；或再次点击「绘制矩形框」限定范围";
+      ? "Region added"
+      : "Click to pick · or Draw for region";
     updateCursors();
     drawRectLayer(item);
     if (pickedColor) refreshAllHighlights();
@@ -483,7 +483,7 @@
     rectDrawMode = true;
     btnDrawRect.disabled = true;
     updateRectUI();
-    modeHint.textContent = "拖拽绘制矩形框，松开后自动回到取色";
+    modeHint.textContent = "Drag to draw";
     updateCursors();
   });
 
@@ -655,10 +655,9 @@
 
     selectionStats.textContent =
       totalReplaced > 0
-        ? `已选中像素：${totalReplaced.toLocaleString()}（${images.length} 张图）`
-        : "已选中像素：—";
-    modeHint.textContent =
-      "替换完成。可继续修改目标颜色后再次替换，或重新点击图片取色";
+        ? `Pixels: ${totalReplaced.toLocaleString()} · ${images.length} img`
+        : "Pixels: —";
+    modeHint.textContent = "Done · pick again or change color";
     updateReplaceButton();
   });
 
@@ -681,7 +680,7 @@
 
     btnDownload.disabled = true;
     const labelEl = document.getElementById("btnDownloadLabel");
-    if (labelEl) labelEl.textContent = " 打包中…";
+    if (labelEl) labelEl.textContent = "Zipping…";
 
     try {
       const zip = new window.JSZip();
@@ -732,7 +731,7 @@
     if (pickedColor) refreshAllHighlights();
     else {
       if (images.length === 0) {
-        selectionStats.textContent = "已选中像素：—";
+        selectionStats.textContent = "Pixels: —";
       }
       updateReplaceButton();
     }
@@ -771,7 +770,7 @@
 
         const btnDelete = document.createElement("button");
         btnDelete.className = "btn-delete-image";
-        btnDelete.title = "删除图片";
+        btnDelete.title = "Remove image";
         btnDelete.innerHTML = `
           <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3.5 3.5L10.5 10.5M10.5 3.5L3.5 10.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -847,17 +846,17 @@
   function updateDownloadButtonLabel() {
     const el = document.getElementById("btnDownloadLabel");
     if (!el) return;
-    el.textContent = images.length > 1 ? "下载所有图片" : "下载图片";
+    el.textContent = images.length > 1 ? "Download All" : "Download";
   }
 
   function updateUploadHint() {
     if (!images.length) {
       uploadZone.classList.remove("has-file");
-      uploadHint.textContent = "支持多张 · PNG · JPG · WebP · GIF";
+      uploadHint.textContent = "PNG · JPG · WebP · GIF";
       return;
     }
     uploadZone.classList.add("has-file");
-    uploadHint.textContent = `已加载 ${images.length} 张 · 可继续添加`;
+    uploadHint.textContent = `${images.length} loaded`;
   }
 
   /** @param {FileList|File[]} rawFiles */
@@ -879,7 +878,7 @@
     for (const file of list) {
       const item = await createItemFromFile(file);
       if (!item) {
-        modeHint.textContent = "部分图片加载失败，已跳过";
+        modeHint.textContent = "Some skipped";
         continue;
       }
       imagesGrid.appendChild(item.card);
@@ -903,12 +902,12 @@
 
     if (pickedColor) refreshAllHighlights();
     else {
-      selectionStats.textContent = "已选中像素：—";
+      selectionStats.textContent = "Pixels: —";
       updateReplaceButton();
     }
 
     if (images.length) {
-      modeHint.textContent = "请在任意图片上点击取色；选中一张图后可绘制限定框";
+      modeHint.textContent = "Click to pick · Draw for region";
     }
   }
 
@@ -950,5 +949,5 @@
   btnDownload.disabled = true;
   btnDrawRect.disabled = true;
   btnClearRect.disabled = true;
-  selectionStats.textContent = "已选中像素：—";
+  selectionStats.textContent = "Pixels: —";
 })();
