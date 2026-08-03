@@ -936,6 +936,27 @@ input[type="range"]::-moz-range-thumb {
   pointer-events: none;
 }
 
+/* SVG 用矢量 img 显示，避免 canvas 栅格放大后的锯齿 */
+.image-canvas-wrap .svg-preview,
+.image-canvas-wrap .svg-highlight {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  object-fit: contain;
+}
+
+.image-canvas-wrap .svg-highlight {
+  opacity: 0.55;
+}
+
+.image-canvas-wrap .img-canvas.svg-backed {
+  opacity: 0;
+}
+
 .image-canvas-wrap .overlay-canvas {
   pointer-events: auto;
 }
