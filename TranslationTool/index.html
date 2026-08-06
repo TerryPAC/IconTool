@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Merge Android and iOS localization strings, translate them, and export platform-ready files." />
+  <title>String i18n Merge Tool — Localization Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <div class="wrap">
+    <h1>String i18n Merge Tool</h1>
+    <p class="sub">
+      Merge Android XML and iOS .strings into one JSON for translation, then write translations
+      back with original keys and order preserved.
+    </p>
+
+    <div class="steps">
+      <button type="button" class="step-tab active" data-step="1">1. Import</button>
+      <button type="button" class="step-tab" data-step="2">2. Merge &amp; Download</button>
+      <button type="button" class="step-tab" data-step="3">3. Export Translations</button>
+    </div>
+
+    <section id="panel-1" class="panel active">
+      <div class="grid-2">
+        <div class="card">
+          <h3>Android XML</h3>
+          <p class="sub" style="margin:0 0 8px">Upload <code>strings.xml</code> (and other XML containing <code>&lt;string&gt;</code>). Multi-select or folder.</p>
+          <div class="btn-row">
+            <button type="button" id="btn-android-files">Add files</button>
+            <button type="button" id="btn-android-folder">Add folder</button>
+            <button type="button" class="danger" id="btn-android-clear">Clear Android</button>
+          </div>
+          <input id="android-files" class="hidden-input" type="file" accept=".xml,text/xml" multiple />
+          <input id="android-folder" class="hidden-input" type="file" accept=".xml,text/xml" webkitdirectory multiple />
+          <div id="android-list" class="file-list">No Android files yet.</div>
+        </div>
+        <div class="card">
+          <h3>iOS .strings</h3>
+          <p class="sub" style="margin:0 0 8px">Upload <code>Localizable.strings</code> (Phase A). <code>.stringsdict</code> is not supported yet.</p>
+          <div class="btn-row">
+            <button type="button" id="btn-ios-files">Add files</button>
+            <button type="button" id="btn-ios-folder">Add folder</button>
+            <button type="button" class="danger" id="btn-ios-clear">Clear iOS</button>
+          </div>
+          <input id="ios-files" class="hidden-input" type="file" accept=".strings,text/plain" multiple />
+          <input id="ios-folder" class="hidden-input" type="file" accept=".strings,text/plain" webkitdirectory multiple />
+          <div id="ios-list" class="file-list">No iOS files yet.</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3>Options</h3>
+        <label class="option"><input type="checkbox" id="opt-include-non-translatable" /> Include <code>translatable="false"</code></label>
+        <label class="option"><input type="checkbox" id="opt-disable-heuristic" /> Disable secret/URL/number heuristic skip</label>
+        <div class="btn-row">
+          <button type="button" class="primary" id="btn-goto-merge">Continue to merge</button>
+          <button type="button" id="btn-run-tests">Run self-tests</button>
+        </div>
+        <div id="import-msg" class="msg info hidden" style="display:none"></div>
+        <div id="test-msg" class="msg" style="display:none"></div>
+      </div>
+    </section>
+
+    <section id="panel-2" class="panel">
+      <div class="btn-row">
+        <button type="button" class="primary" id="btn-run-merge">Run merge</button>
+        <button type="button" id="btn-dl-session">Download session.zip (required)</button>
+        <button type="button" id="btn-dl-simple">Download merged.simple.json</button>
+        <button type="button" id="btn-dl-full">Download merged.full.json</button>
+        <button type="button" id="btn-dl-mapping">Download mapping.json</button>
+        <button type="button" id="btn-dl-skipped">Download skipped list</button>
+      </div>
+      <div id="merge-stats" class="stats"></div>
+      <input type="search" id="merge-search" placeholder="Search source / id / key..." />
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>id</th>
+              <th>source</th>
+              <th>platforms</th>
+              <th>count</th>
+            </tr>
+          </thead>
+          <tbody id="merge-tbody"></tbody>
+        </table>
+      </div>
+      <div id="merge-msg" class="msg info" style="display:none"></div>
+    </section>
+
+    <section id="panel-3" class="panel">
+      <div class="card">
+        <h3>Upload translated JSON</h3>
+        <p class="sub" style="margin:0 0 8px">Must keep <code>id</code> and <code>{{PH_n}}</code> tokens. One file = one target language.</p>
+        <div class="btn-row">
+          <button type="button" id="btn-translated">Upload translated.json</button>
+          <button type="button" id="btn-session-zip">Upload session.zip</button>
+        </div>
+        <input id="translated-file" class="hidden-input" type="file" accept=".json,application/json" />
+        <input id="session-file" class="hidden-input" type="file" accept=".zip,application/zip" />
+        <label class="option"><input type="checkbox" id="opt-fallback-source" /> Empty translation falls back to source</label>
+        <label class="option" style="display:block;margin-top:10px">
+          Android output folder name
+          <input type="text" id="android-locale-dir" value="values-xx" />
+        </label>
+        <label class="option" style="display:block;margin-top:10px">
+          iOS output folder name
+          <input type="text" id="ios-locale-dir" value="xx.lproj" />
+        </label>
+        <div class="btn-row">
+          <button type="button" class="primary" id="btn-export">Validate &amp; download output.zip</button>
+        </div>
+        <div id="export-msg" class="msg" style="display:none"></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="vendor/jszip.min.js"></script>
+  <script src="js/normalize/unescape.js"></script>
+  <script src="js/normalize/placeholders.js"></script>
+  <script src="js/merge/filters.js"></script>
+  <script src="js/merge/hash.js"></script>
+  <script src="js/parsers/androidXml.js"></script>
+  <script src="js/parsers/iosStrings.js"></script>
+  <script src="js/parsers/iosStringsdict.js"></script>
+  <script src="js/merge/mergeEngine.js"></script>
+  <script src="js/export/androidWriter.js"></script>
+  <script src="js/export/iosWriter.js"></script>
+  <script src="js/export/zipDownload.js"></script>
+  <script src="js/validate/roundtrip.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

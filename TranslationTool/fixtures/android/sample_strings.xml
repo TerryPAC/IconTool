@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="btn_continue">Continue</string>
+    <string name="btn_continue_lower">continue</string>
+    <string name="btn_continue_upper">CONTINUE</string>
+    <string name="hello_user">Hello, %1$s!</string>
+    <string name="percent_literal">Save 50%% today</string>
+    <string name="with_apostrophe">You\'ve unlocked our deal</string>
+    <string name="with_html"><u>Forgot your password?</u></string>
+    <string name="trailing_space">Increase quantity </string>
+    <string name="api_key_sample" translatable="false">35vefmcjc2q2pvpxxxxxxxxxxxxxxxxxxxxxxxx</string>
+    <string name="dropbox_api_key">abcdefghijklmnopqrstuvwxyz0123456789ABCD</string>
+    <string name="formatted_false" formatted="false">Use %s as literal text</string>
+    <string name="amp_sample">A &amp; B</string>
+</resources>

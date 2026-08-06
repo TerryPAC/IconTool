@@ -1,0 +1,8 @@
+/* Sample Localizable.strings for fixture tests */
+"btn_continue" = "Continue";
+"btn_continue_lower" = "continue";
+"hello_user" = "Hello, %@!";
+"percent_literal" = "Save 50%% today";
+"only_ios" = "ONLY_IOS_UNIQUE";
+// trailing comment
+"with_quote" = "He said \"hi\"";
