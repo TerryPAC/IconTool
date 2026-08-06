@@ -621,6 +621,42 @@ summary:focus-visible {
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--surface-raised);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.stat:hover,
+.stat[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px rgba(94, 234, 138, 0.18);
+}
+
+.stat:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.stat .n,
+.stat .l {
+  display: block;
+}
+
+.stats-preview {
+  margin: 0 0 14px;
+}
+
+.stats-preview[hidden] {
+  display: none;
+}
+
+.preview-status {
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 0.72rem;
 }
 
 .stat .n {

@@ -146,6 +146,27 @@
       </div>
 
       <div id="merge-stats" class="stats"></div>
+      <div id="stats-preview" class="card stats-preview" hidden>
+        <div class="card-head inline-head">
+          <div>
+            <h3 id="stats-preview-title">String preview</h3>
+            <p id="stats-preview-desc" class="hint">Click a statistic above to inspect its strings.</p>
+          </div>
+          <button type="button" class="ghost" id="btn-close-stats-preview">Close</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>key</th>
+                <th>value</th>
+                <th>platforms</th>
+              </tr>
+            </thead>
+            <tbody id="stats-preview-tbody"></tbody>
+          </table>
+        </div>
+      </div>
       <div id="merge-msg" class="msg info" style="display:none"></div>
       <div id="merge-warnings" class="warning-panel" style="display:none"></div>
 

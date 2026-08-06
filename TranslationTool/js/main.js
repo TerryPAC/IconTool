@@ -354,8 +354,98 @@
     );
   }
 
+  function sourcePreviewItems(platform, skippedOnly) {
+    var st = StringI18nState.getState();
+    var files = platform === "android" ? st.androidFiles : st.iosFiles;
+    var items = [];
+    var options = st.options || {};
+    files.forEach(function (file) {
+      file.entries.forEach(function (entry) {
+        var skipReason = StringI18nFilters.getSkipReason(entry, options);
+        if (skippedOnly && !skipReason) {
+          return;
+        }
+        items.push({
+          key: entry.key,
+          source: entry.decodedValue,
+          platforms: platform,
+          status: skipReason ? "Skipped: " + skipReason : "Included"
+        });
+      });
+    });
+    return items;
+  }
+
+  function previewItemsFor(statKey, result) {
+    if (statKey === "android" || statKey === "ios") {
+      return sourcePreviewItems(statKey, false);
+    }
+    if (statKey === "androidSkipped" || statKey === "iosSkipped") {
+      return sourcePreviewItems(statKey === "androidSkipped" ? "android" : "ios", true);
+    }
+    return result.mergedFull.filter(function (item) {
+      var platforms = item.meta.platforms || [];
+      if (statKey === "merged") {
+        return true;
+      }
+      if (statKey === "both") {
+        return platforms.indexOf("android") !== -1 && platforms.indexOf("ios") !== -1;
+      }
+      if (statKey === "androidOnly") {
+        return platforms.length === 1 && platforms.indexOf("android") !== -1;
+      }
+      return platforms.length === 1 && platforms.indexOf("ios") !== -1;
+    }).map(function (item) {
+      return {
+        key: item.outputKey,
+        source: item.source,
+        platforms: (item.meta.platforms || []).join(", "),
+        status: ""
+      };
+    });
+  }
+
+  function renderStatsPreview(statKey, result, label) {
+    var preview = $("stats-preview");
+    var items = previewItemsFor(statKey, result);
+    $("stats-preview-title").textContent = label + " strings";
+    $("stats-preview-desc").textContent = items.length + " matching string(s).";
+    $("stats-preview-tbody").innerHTML = items
+      .slice(0, 500)
+      .map(function (item) {
+        return (
+          "<tr><td><code>" +
+          escapeHtml(item.key) +
+          "</code></td><td>" +
+          escapeHtml(item.source) +
+          "</td><td>" +
+          escapeHtml(item.platforms) +
+          (item.status ? "<br><span class=\"preview-status\">" + escapeHtml(item.status) + "</span>" : "") +
+          "</td></tr>"
+        );
+      })
+      .join("");
+    if (items.length > 500) {
+      $("stats-preview-tbody").innerHTML +=
+        "<tr><td colspan='3'>Showing first 500 of " + items.length + " rows.</td></tr>";
+    }
+    preview.hidden = false;
+  }
+
   function renderStats(result) {
     var s = result.stats;
+    $("stats-preview").hidden = true;
+    var labels = {
+      android: "Android",
+      ios: "iOS",
+      merged: "Merged",
+      both: "Both",
+      androidOnly: "Android only",
+      iosOnly: "iOS only",
+      androidSkipped: "Android skipped",
+      iosSkipped: "iOS skipped"
+    };
+    var keys = Object.keys(labels);
     $("merge-stats").innerHTML = [
       ["Android", s.androidTotal],
       ["iOS", s.iosTotal],
@@ -366,16 +456,24 @@
       ["Android skipped", s.androidSkipped],
       ["iOS skipped", s.iosSkipped]
     ]
-      .map(function (pair) {
+      .map(function (pair, index) {
+        var statKey = keys[index];
         return (
-          '<div class="stat"><div class="n">' +
+          '<button type="button" class="stat" data-stat-key="' +
+          statKey +
+          '" aria-pressed="false"><span class="n">' +
           pair[1] +
-          '</div><div class="l">' +
+          '</span><span class="l">' +
           pair[0] +
-          "</div></div>"
+          "</span></button>"
         );
       })
       .join("");
+    var stats = $("merge-stats").querySelectorAll(".stat");
+    var i;
+    for (i = 0; i < stats.length; i += 1) {
+      stats[i].setAttribute("aria-pressed", "false");
+    }
   }
 
   function renderKeyValueWarnings(warnings) {
@@ -659,6 +757,28 @@
       var st = StringI18nState.getState();
       if (st.mergeResult) {
         renderMergeTable(st.mergeResult.mergedFull, e.target.value);
+      }
+    });
+
+    $("merge-stats").addEventListener("click", function (e) {
+      var stat = e.target.closest(".stat");
+      var st = StringI18nState.getState();
+      if (!stat || !st.mergeResult) {
+        return;
+      }
+      var stats = $("merge-stats").querySelectorAll(".stat");
+      var i;
+      for (i = 0; i < stats.length; i += 1) {
+        stats[i].setAttribute("aria-pressed", stats[i] === stat ? "true" : "false");
+      }
+      renderStatsPreview(stat.getAttribute("data-stat-key"), st.mergeResult, stat.querySelector(".l").textContent);
+    });
+    $("btn-close-stats-preview").addEventListener("click", function () {
+      $("stats-preview").hidden = true;
+      var stats = $("merge-stats").querySelectorAll(".stat");
+      var i;
+      for (i = 0; i < stats.length; i += 1) {
+        stats[i].setAttribute("aria-pressed", "false");
       }
     });
 
