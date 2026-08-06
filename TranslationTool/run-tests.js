@@ -58,12 +58,9 @@ var merged = sandbox.StringI18nMergeEngine.mergeAll(
   {}
 );
 
-var translated = merged.mergedSimple.map(function (row) {
-  return {
-    id: row.id,
-    source: row.source,
-    translation: "[FR] " + row.source
-  };
+var translated = {};
+Object.keys(merged.mergedSimple).forEach(function (key) {
+  translated[key] = "[FR] " + merged.mergedSimple[key];
 });
 
 var session = {
@@ -99,16 +96,33 @@ if (exported.outputs.length !== 2) {
   var outAndroid = exported.outputs.find(function (o) {
     return o.platform === "android";
   });
+  var outIos = exported.outputs.find(function (o) {
+    return o.platform === "ios";
+  });
+  if (outAndroid.content.indexOf("<!--") !== -1 || outIos.content.indexOf("// trailing comment") !== -1) {
+    failed.push({
+      name: "export removes source comments",
+      ok: false,
+      message: "comments remained in exported files"
+    });
+  }
   var parsedOut = sandbox.StringI18nAndroidXml.parseAndroidXml(outAndroid.content, outAndroid.fileId);
-  if (parsedOut.entries.length !== a.entries.length) {
+  var expectedAndroidEntries = merged.mapping.files
+    .filter(function (f) {
+      return f.platform === "android";
+    })[0]
+    .entries.filter(function (entry) {
+      return !entry.skipped;
+    });
+  if (parsedOut.entries.length !== expectedAndroidEntries.length) {
     failed.push({
       name: "android key count",
       ok: false,
-      message: parsedOut.entries.length + " vs " + a.entries.length
+      message: parsedOut.entries.length + " vs " + expectedAndroidEntries.length
     });
   }
-  for (var idx = 0; idx < a.entries.length; idx += 1) {
-    if (parsedOut.entries[idx].key !== a.entries[idx].key) {
+  for (var idx = 0; idx < expectedAndroidEntries.length; idx += 1) {
+    if (parsedOut.entries[idx].key !== expectedAndroidEntries[idx].key) {
       failed.push({
         name: "android key order",
         ok: false,

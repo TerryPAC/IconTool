@@ -2,6 +2,11 @@
 (function () {
   "use strict";
 
+  var selectedPreview = {
+    android: null,
+    ios: null
+  };
+
   function $(id) {
     return document.getElementById(id);
   }
@@ -10,6 +15,12 @@
     el.style.display = "block";
     el.className = "msg " + type;
     el.textContent = text;
+  }
+
+  function showMsgLines(el, type, lines) {
+    el.style.display = "block";
+    el.className = "msg " + type;
+    el.innerHTML = lines.map(escapeHtml).join("<br>");
   }
 
   function setStep(step) {
@@ -21,6 +32,7 @@
     $("panel-1").classList.toggle("active", step === 1);
     $("panel-2").classList.toggle("active", step === 2);
     $("panel-3").classList.toggle("active", step === 3);
+    refreshSessionStatus();
   }
 
   function readOptions() {
@@ -39,27 +51,206 @@
     st.options.fallbackToSource = opts.fallbackToSource;
   }
 
-  function summarizeFiles(list) {
-    if (!list.length) {
-      return "No files yet.";
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function setPreview(platform, fileRec) {
+    var previewEl = $(platform + "-preview");
+    var pathEl = $(platform + "-preview-path");
+    if (!fileRec) {
+      selectedPreview[platform] = null;
+      pathEl.textContent = "Select a file to preview";
+      previewEl.textContent = "No file selected.";
+      return;
     }
-    return list
+    selectedPreview[platform] = fileRec.fileId;
+    pathEl.textContent = fileRec.fileId;
+    previewEl.textContent = fileRec.rawText || "";
+  }
+
+  function renderFileList(platform, list) {
+    var container = $(platform + "-list");
+    var countEl = $(platform + "-count");
+    var label = platform === "android" ? "Android" : "iOS";
+    countEl.textContent = label + ": " + list.length;
+
+    if (!list.length) {
+      container.innerHTML = '<div class="empty-state">No ' + label + " files yet.</div>";
+      setPreview(platform, null);
+      return;
+    }
+
+    var selectedId = selectedPreview[platform];
+    var selectedRec = null;
+    var i;
+    for (i = 0; i < list.length; i += 1) {
+      if (list[i].fileId === selectedId) {
+        selectedRec = list[i];
+        break;
+      }
+    }
+    if (!selectedRec) {
+      selectedRec = list[0];
+    }
+
+    container.innerHTML = list
       .map(function (f) {
+        var active = f.fileId === selectedRec.fileId ? " active" : "";
+        var warn =
+          f.warnings && f.warnings.length
+            ? " · " + f.warnings.length + " warning" + (f.warnings.length === 1 ? "" : "s")
+            : "";
         return (
-          f.fileId +
-          " — " +
+          '<button type="button" class="file-item' +
+          active +
+          '" role="option" aria-selected="' +
+          (active ? "true" : "false") +
+          '" data-platform="' +
+          platform +
+          '" data-file-id="' +
+          escapeHtml(f.fileId) +
+          '">' +
+          '<span class="file-id">' +
+          escapeHtml(f.fileId) +
+          "</span>" +
+          '<span class="file-meta">' +
           f.entries.length +
           " entries" +
-          (f.warnings.length ? " (" + f.warnings.length + " warnings)" : "")
+          warn +
+          "</span>" +
+          "</button>"
         );
       })
-      .join("\n");
+      .join("");
+
+    setPreview(platform, selectedRec);
   }
 
   function refreshFileLists() {
     var st = StringI18nState.getState();
-    $("android-list").textContent = summarizeFiles(st.androidFiles);
-    $("ios-list").textContent = summarizeFiles(st.iosFiles);
+    renderFileList("android", st.androidFiles);
+    renderFileList("ios", st.iosFiles);
+  }
+
+  function refreshSessionStatus() {
+    var el = $("session-status");
+    if (!el) {
+      return;
+    }
+    if (StringI18nState.hasSessionInMemory()) {
+      el.textContent = "In-tab session ready.";
+      el.className = "status-line ready";
+    } else {
+      el.textContent = "Upload session.zip if merge data is not in this tab.";
+      el.className = "status-line";
+    }
+    var st = StringI18nState.getState();
+    var hasMapping = !!(
+      st.mergeResult &&
+      st.mergeResult.mapping &&
+      Array.isArray(st.mergeResult.mapping.files)
+    );
+    $("session-card").style.display = hasMapping ? "none" : "block";
+  }
+
+  function parseTranslatedJson(text) {
+    var data = JSON.parse(String(text || "").trim());
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("translated.json must be a key/value object");
+    }
+    return data;
+  }
+
+  function updateTranslatedPreviewStatus() {
+    var text = $("translated-preview").value.trim();
+    var status = $("translated-preview-status");
+    if (!text) {
+      status.textContent = "Paste or upload JSON to continue.";
+      status.className = "status-line";
+      return;
+    }
+    try {
+      var data = parseTranslatedJson(text);
+      status.textContent = "Valid JSON · " + Object.keys(data).length + " translated entries.";
+      status.className = "status-line ready";
+    } catch (err) {
+      status.textContent = "JSON needs attention: " + String(err.message || err);
+      status.className = "status-line invalid";
+    }
+  }
+
+  function getExportResult() {
+    syncOptionsToState();
+    var translatedData;
+    try {
+      translatedData = parseTranslatedJson($("translated-preview").value);
+    } catch (err) {
+      updateTranslatedPreviewStatus();
+      showMsg($("export-msg"), "err", "Fix the translated JSON in the preview before continuing.");
+      return null;
+    }
+    StringI18nState.setTranslated(translatedData);
+    var st = StringI18nState.getState();
+    if (!StringI18nState.hasSessionInMemory()) {
+      showMsg($("export-msg"), "err", "Upload session.zip to load mapping and source snapshots.");
+      return null;
+    }
+    var result = StringI18nExportWriters.exportPlatformFiles(
+      {
+        mapping: st.mergeResult.mapping,
+        snapshots: st.snapshots
+      },
+      translatedData,
+      {
+        fallbackToSource: st.options.fallbackToSource
+      }
+    );
+    if (result.report.fileErrors.length) {
+      showMsg(
+        $("export-msg"),
+        "err",
+        "Export blocked: " +
+          result.report.fileErrors
+            .map(function (e) {
+              return e.fileId + ": " + e.message;
+            })
+            .join("; ")
+      );
+      return null;
+    }
+    return result;
+  }
+
+  function renderOutputGroup(id, platform, outputs) {
+    var platformOutputs = outputs.filter(function (output) {
+      return output.platform === platform;
+    });
+    if (!platformOutputs.length) {
+      $(id).textContent = "No " + platform + " files in this session.";
+      return;
+    }
+    $(id).innerHTML = platformOutputs
+      .map(function (output) {
+        return (
+          '<section class="output-file"><h4>' +
+          escapeHtml(output.fileId) +
+          "</h4><pre>" +
+          escapeHtml(output.content) +
+          "</pre></section>"
+        );
+      })
+      .join("");
+  }
+
+  function renderExportPreview(result) {
+    $("export-preview").style.display = "grid";
+    renderOutputGroup("android-output-preview", "android", result.outputs);
+    renderOutputGroup("ios-output-preview", "ios", result.outputs);
   }
 
   function readFileAsText(file) {
@@ -91,8 +282,10 @@
       xmlFiles.map(function (file) {
         return readFileAsText(file).then(function (text) {
           var fileId = normalizeFileId(file);
-          var parsed = StringI18nAndroidXml.parseAndroidXml(text, fileId);
-          StringI18nState.upsertFile("android", fileId, text, parsed);
+          var cleanText = StringI18nAndroidXml.stripAndroidComments(text);
+          var parsed = StringI18nAndroidXml.parseAndroidXml(cleanText, fileId);
+          StringI18nState.upsertFile("android", fileId, cleanText, parsed);
+          selectedPreview.android = fileId;
         });
       })
     ).then(function () {
@@ -117,8 +310,10 @@
       stringFiles.map(function (file) {
         return readFileAsText(file).then(function (text) {
           var fileId = normalizeFileId(file);
-          var parsed = StringI18nIosStrings.parseIosStrings(text, fileId);
-          StringI18nState.upsertFile("ios", fileId, text, parsed);
+          var cleanText = StringI18nIosStrings.stripIosComments(text);
+          var parsed = StringI18nIosStrings.parseIosStrings(cleanText, fileId);
+          StringI18nState.upsertFile("ios", fileId, cleanText, parsed);
+          selectedPreview.ios = fileId;
         });
       })
     ).then(function () {
@@ -142,19 +337,20 @@
     var result = StringI18nMergeEngine.mergeAll(records, st.options);
     StringI18nState.setMergeResult(result);
     renderStats(result);
-    renderMergeTable(result.mergedFull, "");
-    var warn = "";
-    if (result.keyValueWarnings.length) {
-      warn = " Key/value warnings: " + result.keyValueWarnings.length + ".";
-    }
-    showMsg(
+    renderMergeTable(result.mergedFull, $("merge-search").value || "");
+    renderKeyValueWarnings(result.keyValueWarnings);
+    refreshSessionStatus();
+    var warningLine = result.keyValueWarnings.length
+      ? result.keyValueWarnings.length + " key/value warning(s) are shown below."
+      : "No key/value warnings.";
+    showMsgLines(
       $("merge-msg"),
       "ok",
-      "Merge complete: " +
-        result.stats.mergedCount +
-        " unique strings." +
-        warn +
-        " Please download session.zip before translating."
+      [
+        "Merge complete: " + result.stats.mergedCount + " unique strings.",
+        warningLine,
+        "Download session.zip and merged.simple.json next."
+      ]
     );
   }
 
@@ -182,6 +378,34 @@
       .join("");
   }
 
+  function renderKeyValueWarnings(warnings) {
+    var container = $("merge-warnings");
+    if (!warnings.length) {
+      container.innerHTML = "";
+      container.style.display = "none";
+      return;
+    }
+    container.innerHTML =
+      "<h3>Key/value warnings (" +
+      warnings.length +
+      ")</h3><ul class=\"warning-list\">" +
+      warnings
+        .map(function (warning) {
+          return (
+            "<li><code>" +
+            escapeHtml(warning.key) +
+            "</code><span>" +
+            escapeHtml(warning.platform) +
+            "</span><span>" +
+            escapeHtml(warning.message) +
+            "</span></li>"
+          );
+        })
+        .join("") +
+      "</ul>";
+    container.style.display = "block";
+  }
+
   function renderMergeTable(items, query) {
     var q = String(query || "").toLowerCase();
     var tbody = $("merge-tbody");
@@ -190,7 +414,7 @@
         return true;
       }
       var blob =
-        (m.id || "") +
+        (m.outputKey || "") +
         " " +
         (m.source || "") +
         " " +
@@ -206,7 +430,7 @@
       .map(function (m) {
         return (
           "<tr><td><code>" +
-          escapeHtml(m.id) +
+          escapeHtml(m.outputKey) +
           "</code></td><td>" +
           escapeHtml(m.source) +
           "</td><td>" +
@@ -223,14 +447,6 @@
     }
   }
 
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   function currentSessionPayload() {
     var st = StringI18nState.getState();
     if (!st.mergeResult) {
@@ -244,6 +460,114 @@
       mapping: st.mergeResult.mapping,
       snapshots: st.snapshots
     };
+  }
+
+  function selectFileFromList(platform, fileId) {
+    var st = StringI18nState.getState();
+    var list = platform === "android" ? st.androidFiles : st.iosFiles;
+    var found = null;
+    var i;
+    for (i = 0; i < list.length; i += 1) {
+      if (list[i].fileId === fileId) {
+        found = list[i];
+        break;
+      }
+    }
+    if (!found) {
+      return;
+    }
+    selectedPreview[platform] = fileId;
+    renderFileList(platform, list);
+  }
+
+  function bindDropZone(platform) {
+    var zone = document.querySelector('.drop-zone[data-platform="' + platform + '"]');
+    var dragDepth = 0;
+    var ingest = platform === "android" ? ingestAndroidFiles : ingestIosFiles;
+
+    zone.addEventListener("dragenter", function (e) {
+      e.preventDefault();
+      dragDepth += 1;
+      zone.classList.add("drag-over");
+    });
+    zone.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+    zone.addEventListener("dragleave", function (e) {
+      e.preventDefault();
+      dragDepth -= 1;
+      if (dragDepth <= 0) {
+        dragDepth = 0;
+        zone.classList.remove("drag-over");
+      }
+    });
+    zone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      dragDepth = 0;
+      zone.classList.remove("drag-over");
+      ingest(e.dataTransfer.files).catch(function (err) {
+        showMsg($("import-msg"), "err", String(err.message || err));
+      });
+    });
+  }
+
+  function loadTranslatedFile(file) {
+    return readFileAsText(file)
+      .then(function (text) {
+        var data = parseTranslatedJson(text);
+        StringI18nState.setTranslated(data);
+        $("translated-preview").value = JSON.stringify(data, null, 2);
+        updateTranslatedPreviewStatus();
+        var status = $("translated-status");
+        status.textContent = "Loaded " + Object.keys(data).length + " entries from " + file.name;
+        status.className = "status-line ready";
+        showMsg(
+          $("export-msg"),
+          "ok",
+          "Loaded " + Object.keys(data).length + " translated entries."
+        );
+      })
+      .catch(function (err) {
+        showMsg($("export-msg"), "err", String(err.message || err));
+      });
+  }
+
+  function bindJsonDropZone() {
+    var zone = document.querySelector(".json-drop-zone");
+    var dragDepth = 0;
+
+    zone.addEventListener("dragenter", function (e) {
+      e.preventDefault();
+      dragDepth += 1;
+      zone.classList.add("drag-over");
+    });
+    zone.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+    zone.addEventListener("dragleave", function (e) {
+      e.preventDefault();
+      dragDepth -= 1;
+      if (dragDepth <= 0) {
+        dragDepth = 0;
+        zone.classList.remove("drag-over");
+      }
+    });
+    zone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      dragDepth = 0;
+      zone.classList.remove("drag-over");
+      var file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) {
+        return;
+      }
+      if (!/\.json$/i.test(file.name) && file.type !== "application/json") {
+        showMsg($("export-msg"), "err", "Please drop a JSON file.");
+        return;
+      }
+      loadTranslatedFile(file);
+    });
   }
 
   function bindUi() {
@@ -265,6 +589,7 @@
     $("btn-ios-folder").addEventListener("click", function () {
       $("ios-folder").click();
     });
+    bindJsonDropZone();
 
     $("android-files").addEventListener("change", function (e) {
       ingestAndroidFiles(e.target.files).catch(function (err) {
@@ -290,14 +615,35 @@
       });
       e.target.value = "";
     });
+    bindDropZone("android");
+    bindDropZone("ios");
+
+    $("android-list").addEventListener("click", function (e) {
+      var btn = e.target.closest(".file-item");
+      if (!btn) {
+        return;
+      }
+      selectFileFromList("android", btn.getAttribute("data-file-id"));
+    });
+    $("ios-list").addEventListener("click", function (e) {
+      var btn = e.target.closest(".file-item");
+      if (!btn) {
+        return;
+      }
+      selectFileFromList("ios", btn.getAttribute("data-file-id"));
+    });
 
     $("btn-android-clear").addEventListener("click", function () {
       StringI18nState.resetPlatform("android");
+      selectedPreview.android = null;
       refreshFileLists();
+      refreshSessionStatus();
     });
     $("btn-ios-clear").addEventListener("click", function () {
       StringI18nState.resetPlatform("ios");
+      selectedPreview.ios = null;
       refreshFileLists();
+      refreshSessionStatus();
     });
 
     $("btn-goto-merge").addEventListener("click", function () {
@@ -305,6 +651,9 @@
       runMerge();
     });
     $("btn-run-merge").addEventListener("click", runMerge);
+    $("btn-goto-export").addEventListener("click", function () {
+      setStep(3);
+    });
 
     $("merge-search").addEventListener("input", function (e) {
       var st = StringI18nState.getState();
@@ -378,19 +727,30 @@
       if (!file) {
         return;
       }
-      readFileAsText(file)
-        .then(function (text) {
-          var data = JSON.parse(text);
-          if (!Array.isArray(data)) {
-            throw new Error("translated.json must be an array");
-          }
-          StringI18nState.setTranslated(data);
-          showMsg($("export-msg"), "ok", "Loaded " + data.length + " translated rows.");
-        })
-        .catch(function (err) {
-          showMsg($("export-msg"), "err", String(err.message || err));
-        });
+      loadTranslatedFile(file);
       e.target.value = "";
+    });
+
+    $("translated-preview").addEventListener("input", updateTranslatedPreviewStatus);
+
+    $("btn-preview").addEventListener("click", function () {
+      var result = getExportResult();
+      if (!result) {
+        return;
+      }
+      renderExportPreview(result);
+      showMsg(
+        $("export-msg"),
+        result.report.failed.length ? "warn" : "ok",
+        "Preview ready: " +
+          result.outputs.length +
+          " file(s), written=" +
+          result.report.written.length +
+          " failed=" +
+          result.report.failed.length +
+          " skipped=" +
+          result.report.skipped.length
+      );
     });
 
     $("session-file").addEventListener("change", function (e) {
@@ -401,6 +761,11 @@
       StringI18nZip.loadSessionZip(file)
         .then(function (session) {
           StringI18nState.loadSession(session);
+          refreshSessionStatus();
+          var status = $("session-status");
+          status.textContent =
+            "Session loaded (" + Object.keys(session.snapshots).length + " snapshots).";
+          status.className = "status-line ready";
           showMsg(
             $("export-msg"),
             "ok",
@@ -414,42 +779,11 @@
     });
 
     $("btn-export").addEventListener("click", function () {
-      syncOptionsToState();
-      var st = StringI18nState.getState();
-      if (!st.translated) {
-        showMsg($("export-msg"), "err", "Upload translated.json first.");
+      var result = getExportResult();
+      if (!result) {
         return;
       }
-      if (!StringI18nState.hasSessionInMemory()) {
-        showMsg($("export-msg"), "err", "Upload session.zip (or keep merge session in this tab).");
-        return;
-      }
-      var session = {
-        mapping: st.mergeResult.mapping,
-        snapshots: st.snapshots
-      };
-      var result = StringI18nExportWriters.exportPlatformFiles(session, st.translated, {
-        fallbackToSource: st.options.fallbackToSource
-      });
-      if (result.report.fileErrors.length) {
-        showMsg(
-          $("export-msg"),
-          "err",
-          "Export blocked: " +
-            result.report.fileErrors
-              .map(function (e) {
-                return e.fileId + ": " + e.message;
-              })
-              .join("; ")
-        );
-        return;
-      }
-      StringI18nZip.buildOutputZip(
-        result.outputs,
-        result.report,
-        $("android-locale-dir").value.trim() || "values-xx",
-        $("ios-locale-dir").value.trim() || "xx.lproj"
-      ).then(function (blob) {
+      StringI18nZip.buildOutputZip(result.outputs, result.report).then(function (blob) {
         StringI18nZip.downloadBlob("output.zip", blob);
         showMsg(
           $("export-msg"),
@@ -489,4 +823,6 @@
 
   bindUi();
   refreshFileLists();
+  refreshSessionStatus();
+  updateTranslatedPreviewStatus();
 })();

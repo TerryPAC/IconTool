@@ -1,81 +1,133 @@
-# String i18n Merge Tool
+# TranslationTool
 
-Local browser tool to merge Android and iOS source strings into one JSON for backend translation, then write translations back while preserving keys and order.
+TranslationTool is an offline browser tool that merges Android XML and iOS `.strings` resources into translation JSON, then writes the translated values back to the source files.
 
-## Open
+Source files and translations are never uploaded by the tool. See [RULES.md](RULES.md) for the complete behavior and maintenance rules.
 
-- Preferred: open `index.html` directly (`file://`) — works offline if `vendor/jszip.min.js` is present.
-- Or serve this folder with any static server:
+## Quick start
+
+Open `index.html` directly from the `TranslationTool` directory, or start a local static server:
 
 ```bash
-cd tools/string-i18n-merge
+cd TranslationTool
 python3 -m http.server 8765
-# open http://localhost:8765
 ```
 
-## Workflow
+Then open <http://localhost:8765>.
 
-1. **Import** Android XML (`strings.xml` and any XML containing `<string>`) and/or iOS `.strings` files. Use multi-select or folder upload.
-2. **Merge** → download **`session.zip`** (required for write-back) and **`merged.simple.json`** (send to backend).
-3. Backend fills `translation` for each row (**keep `id` and `{{PH_n}}` tokens**).
-4. **Export**: upload `translated.json` + `session.zip` → download `output.zip`.
+## Usage workflow
 
-## Backend JSON contract
+### 1. Import source files
 
-Input / output array:
+- Android: select one or more XML files or a resource directory.
+- iOS: select one or more `.strings` files or a directory.
+- Drag and drop is supported.
+- Import source-language files only, such as Android `res/values/strings.xml`.
+- Do not import translated directories such as `values-de/` unless they are intentionally used as the merge source.
+
+Comments are removed immediately after import: Android XML comments and iOS `//` and `/* ... */` comments. The cleaned content is used for previews, snapshots, and merging.
+
+### 2. Merge and download the session package
+
+Click **Continue to merge**, review the merged preview, then download:
+
+- `merged.simple.json`: send this file to the translation backend.
+- `session.zip`: keep this file; it is required to match source files, key order, and source positions during export.
+
+### 3. Translate the JSON
+
+The backend should modify JSON values only. Generated keys must remain unchanged:
 
 ```json
-[
-  { "id": "v1_a1b2c3d4", "source": "Hello, {{PH_0}}!", "translation": "Bonjour, {{PH_0}}!" }
-]
+{
+  "hello_ph_0_1": "Bonjour, {{PH_0}}!"
+}
 ```
 
-Rules:
+All `{{PH_n}}` placeholders must be preserved with the same count and order. One JSON file represents one target language.
 
-- Do **not** change `id`.
-- Preserve every `{{PH_n}}` token (count and order).
-- One JSON file = one target language.
-- Case matters: `Continue` / `continue` / `CONTINUE` are three separate rows.
+### 4. Export translated files
 
-## Merge rules (Phase A)
+Open **Export translations**:
 
-- Deduplicate by **case-sensitive** placeholder-normalized source text.
-- Do **not** trim whitespace; do not normalize curly apostrophes.
-- `%%` stays literal (not a placeholder token).
-- Android `formatted="false"`: `%...` is not treated as format placeholders.
-- Default skip: `translatable="false"`, empty values, `@string/...`, heuristic secrets/URLs/emails/numbers (toggleable).
+1. Upload the translated JSON.
+2. Upload the matching `session.zip` if the merge session is no longer available in the current browser tab.
+3. Click **Preview Android + iOS** to inspect the result.
+4. Click **Export Android + iOS** to download `output.zip`.
 
-## What to upload from PhotoArt
+`output.zip` contains the rewritten Android/iOS files and `report.json`. Exported files contain no source comments.
 
-Source language files only, for example:
+## Code flow
 
-- `photoart/src/main/res/values/strings.xml`
-- `common_libs_android/mydealslib/src/main/res/values/strings.xml`
+```mermaid
+flowchart TD
+    A[Select or drop source files] --> B{File type}
+    B -->|Android XML| C[stripAndroidComments]
+    B -->|iOS .strings| D[stripIosComments]
+    C --> E[parseAndroidXml]
+    D --> F[parseIosStrings]
+    E --> G[State.upsertFile<br/>save cleaned snapshot]
+    F --> G
+    G --> H[buildFileRecords]
+    H --> I[mergeAll]
+    I --> J[Filter, normalize placeholders, deduplicate]
+    J --> K[Generate merged.simple.json<br/>and mapping]
+    K --> L[Download session.zip]
+    K --> M[Translation backend updates values]
+    M --> N[Upload translated.json]
+    L --> O[exportPlatformFiles]
+    N --> O
+    O --> P[Validate hash, keys, order, placeholders]
+    P --> Q{Validation passed?}
+    Q -->|No| R[Write report.json failures]
+    Q -->|Yes| S[Remove comments and write translations]
+    S --> T[Generate output.zip]
+```
 
-Do **not** upload already-translated folders like `values-de/` as source unless you intentionally want those texts as the merge base.
+## Code structure
 
-Flavor-specific trees (`mydealslib/src/free`, `us_fla`, …) are optional — choose what your release needs.
+| File | Responsibility |
+| --- | --- |
+| `index.html` | Page structure and import/merge/export UI |
+| `js/main.js` | UI events, file import, and workflow orchestration |
+| `js/state.js` | Current session, source files, and snapshots |
+| `js/parsers/androidXml.js` | Android comment removal, XML parsing, and rewriting |
+| `js/parsers/iosStrings.js` | iOS comment removal, `.strings` parsing, and rewriting |
+| `js/merge/mergeEngine.js` | Skip rules, deduplication, merging, and mapping |
+| `js/normalize/placeholders.js` | Placeholder normalization such as `%1$s` and `%@` |
+| `js/export/androidWriter.js` | Translation validation, file rewriting, and export reports |
+| `js/export/zipDownload.js` | ZIP/JSON downloads and session read/write |
+| `js/validate/roundtrip.js` | Browser self-tests |
+| `run-tests.js` | Node.js test entry point |
 
-## Output
+## Rule summary
 
-`output.zip` contains:
+- Deduplication uses case-sensitive, placeholder-normalized source text.
+- Source leading and trailing whitespace is preserved.
+- `%%` is treated as literal text.
+- Android `formatted="false"` disables percent-format placeholder detection.
+- By default, non-translatable entries, empty values, and likely secrets/URLs/emails/numbers are skipped.
+- **Empty translation falls back to source** controls whether an empty translation fails or writes the original source text.
+- Skipped Android entries are omitted from localized files and fall back to the default `values` resources.
 
-- `android/<values-xx>/...` rewritten XML
-- `ios/<xx.lproj>/...` rewritten `.strings`
-- `report.json` (written / failed / skipped)
-
-Folder names are labels only; keys inside files are unchanged.
+See [RULES.md](RULES.md) for the detailed rules.
 
 ## Self-tests
 
-On step 1, click **Run self-tests**.
+Click **Run self-tests** in step 1, or run:
 
-## Known limitations (MVP / Phase A)
+```bash
+cd TranslationTool
+node run-tests.js
+```
 
-- No Android `<plurals>` / `<string-array>` write path yet (files with only those yield 0 `<string>` entries).
-- No iOS `.stringsdict` / `.xcstrings`.
-- Same normalized value always merges (homographs share one translation).
+## Known limitations
+
+- Android `<plurals>` and `<string-array>` write-back is not supported yet.
+- iOS `.stringsdict` and `.xcstrings` are not supported.
+- Identical normalized source text shares one translation.
 
 ## Fixtures
 
-See `fixtures/android/sample_strings.xml` and `fixtures/ios/Localizable.strings`.
+- `fixtures/android/sample_strings.xml`
+- `fixtures/ios/Localizable.strings`

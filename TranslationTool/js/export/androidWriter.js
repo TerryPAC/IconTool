@@ -2,16 +2,14 @@
 (function (global) {
   "use strict";
 
-  function buildTranslationMap(translatedArray) {
+  function buildTranslationMap(translatedData) {
     var map = {};
-    var i;
-    for (i = 0; i < translatedArray.length; i += 1) {
-      var row = translatedArray[i];
-      if (!row || !row.id) {
-        continue;
-      }
-      map[row.id] = row;
-    }
+    Object.keys(translatedData || {}).forEach(function (key) {
+      map[key] = {
+        outputKey: key,
+        translation: translatedData[key]
+      };
+    });
     return map;
   }
 
@@ -20,9 +18,12 @@
     if (mapEntry.skipped) {
       return { action: "skip", reason: mapEntry.skipReason || "skipped" };
     }
-    var row = translationMap[mapEntry.mergedId];
+    var row = translationMap[mapEntry.mergedId] || translationMap[mapEntry.outputKey];
     if (!row) {
-      return { action: "fail", reason: "missing translation id " + mapEntry.mergedId };
+      return {
+        action: "fail",
+        reason: "missing translation key " + (mapEntry.outputKey || mapEntry.mergedId)
+      };
     }
     var translation = row.translation;
     if (translation === null || translation === undefined || translation === "") {
@@ -79,8 +80,28 @@
     return { action: "write", decoded: decodedRestored };
   }
 
-  function exportPlatformFiles(session, translatedArray, options) {
-    var translationMap = buildTranslationMap(translatedArray || []);
+  function getAndroidRemovalRange(raw, entryStart, entryEnd) {
+    var lineStart = raw.lastIndexOf("\n", entryStart - 1) + 1;
+    var lineEnd = raw.indexOf("\n", entryEnd);
+    if (lineEnd === -1) {
+      lineEnd = raw.length;
+    }
+    var before = raw.slice(lineStart, entryStart);
+    var after = raw.slice(entryEnd, lineEnd);
+    if (/^\s*$/.test(before + after)) {
+      return {
+        entryStart: lineStart,
+        entryEnd: lineEnd < raw.length ? lineEnd + 1 : lineEnd
+      };
+    }
+    return {
+      entryStart: entryStart,
+      entryEnd: entryEnd
+    };
+  }
+
+  function exportPlatformFiles(session, translatedData, options) {
+    var translationMap = buildTranslationMap(translatedData || {});
     var report = {
       written: [],
       failed: [],
@@ -100,9 +121,14 @@
         report.fileErrors.push({ fileId: fileMeta.fileId, message: "missing snapshot" });
         continue;
       }
+      var sourceRaw = raw;
+      raw =
+        fileMeta.platform === "android"
+          ? StringI18nAndroidXml.stripAndroidComments(raw)
+          : StringI18nIosStrings.stripIosComments(raw);
       var hashNow =
         global.StringI18nHash && global.StringI18nHash.contentHash
-          ? global.StringI18nHash.contentHash(raw)
+          ? global.StringI18nHash.contentHash(sourceRaw)
           : null;
       if (hashNow && fileMeta.contentHash && hashNow !== fileMeta.contentHash) {
         report.fileErrors.push({
@@ -132,6 +158,7 @@
       }
 
       var replacements = [];
+      var removals = [];
       var ei;
       var structureOk = true;
       for (ei = 0; ei < fileMeta.entries.length; ei += 1) {
@@ -162,6 +189,15 @@
             key: mapEntry.key,
             reason: prep.reason
           });
+          if (
+            fileMeta.platform === "android" &&
+            mapEntry.entryStart !== undefined &&
+            mapEntry.entryEnd !== undefined
+          ) {
+            removals.push(
+              getAndroidRemovalRange(raw, live.entryStart, live.entryEnd)
+            );
+          }
           continue;
         }
         if (prep.action === "fail") {
@@ -195,7 +231,7 @@
 
       var outText =
         fileMeta.platform === "android"
-          ? StringI18nAndroidXml.rewriteAndroidXml(raw, replacements)
+          ? StringI18nAndroidXml.rewriteAndroidXml(raw, replacements, removals)
           : StringI18nIosStrings.rewriteIosStrings(raw, replacements);
 
       // verify keys/order
@@ -204,12 +240,19 @@
           ? StringI18nAndroidXml.parseAndroidXml(outText, fileMeta.fileId)
           : StringI18nIosStrings.parseIosStrings(outText, fileMeta.fileId);
       var keysOk = true;
-      if (verify.entries.length !== parsed.entries.length) {
+      var expectedEntries = parsed.entries.filter(function (entry, index) {
+        return !(
+          fileMeta.platform === "android" &&
+          fileMeta.entries[index] &&
+          fileMeta.entries[index].skipped
+        );
+      });
+      if (verify.entries.length !== expectedEntries.length) {
         keysOk = false;
       } else {
         var vi;
-        for (vi = 0; vi < parsed.entries.length; vi += 1) {
-          if (verify.entries[vi].key !== parsed.entries[vi].key) {
+        for (vi = 0; vi < expectedEntries.length; vi += 1) {
+          if (verify.entries[vi].key !== expectedEntries[vi].key) {
             keysOk = false;
             break;
           }

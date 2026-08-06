@@ -12,6 +12,15 @@
     return entries;
   }
 
+  function makeTranslationKey(source, order) {
+    var key = String(source || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    key = (key || "string").slice(0, 40).replace(/_+$/g, "");
+    return (key || "string") + "_" + String(order + 1);
+  }
+
   function mergeAll(fileRecords, options) {
     var opts = options || {};
     var mergedMap = {};
@@ -71,6 +80,8 @@
             originalDecoded: entry.decodedValue,
             placeholderPattern: [],
             normalizeTokens: [],
+            entryStart: entry.entryStart,
+            entryEnd: entry.entryEnd,
             valueStart: entry.valueStart,
             valueEnd: entry.valueEnd
           });
@@ -87,6 +98,7 @@
             id: mergedId,
             source: norm.normalized,
             translation: "",
+            outputKey: makeTranslationKey(norm.normalized, mergedList.length),
             meta: {
               originalSamples: {},
               platforms: [],
@@ -115,11 +127,14 @@
           key: entry.key,
           entryType: entry.entryType,
           mergedId: mergedId,
+          outputKey: item.outputKey,
           skipped: false,
           skipReason: null,
           originalDecoded: entry.decodedValue,
           placeholderPattern: norm.placeholderPattern,
           normalizeTokens: norm.normalizeTokens,
+          entryStart: entry.entryStart,
+          entryEnd: entry.entryEnd,
           valueStart: entry.valueStart,
           valueEnd: entry.valueEnd
         });
@@ -159,8 +174,9 @@
       files: mappingFiles
     };
 
-    var simple = mergedList.map(function (m) {
-      return { id: m.id, source: m.source, translation: m.translation };
+    var simple = {};
+    mergedList.forEach(function (m) {
+      simple[m.outputKey] = m.source;
     });
 
     return {

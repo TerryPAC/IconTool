@@ -32,6 +32,12 @@
    * Parse Android resource XML for <string> entries.
    * Tracks valueStart/valueEnd for in-place rewrite.
    */
+  function stripAndroidComments(rawText) {
+    return String(rawText).replace(/<!--[\s\S]*?-->/g, function (comment) {
+      return comment.replace(/[^\r\n]/g, "");
+    });
+  }
+
   function parseAndroidXml(rawText, fileId) {
     var text = String(rawText);
     var entries = [];
@@ -78,6 +84,8 @@
         pluralQuantity: null,
         arrayIndex: null,
         order: order,
+        entryStart: match.index,
+        entryEnd: match.index + match[0].length,
         valueStart: valueStart,
         valueEnd: valueEnd,
         attributes: {
@@ -98,21 +106,37 @@
     };
   }
 
-  function rewriteAndroidXml(rawText, replacements) {
-    // replacements: [{valueStart, valueEnd, newRawValue}] sorted by start desc
+  function rewriteAndroidXml(rawText, replacements, removals) {
+    // replacements: [{valueStart, valueEnd, newRawValue}]
+    // removals: [{entryStart, entryEnd}]
     var text = String(rawText);
-    var list = (replacements || []).slice().sort(function (a, b) {
-      return b.valueStart - a.valueStart;
+    var list = (replacements || []).map(function (replacement) {
+      return {
+        start: replacement.valueStart,
+        end: replacement.valueEnd,
+        value: replacement.newRawValue
+      };
+    });
+    (removals || []).forEach(function (removal) {
+      list.push({
+        start: removal.entryStart,
+        end: removal.entryEnd,
+        value: ""
+      });
+    });
+    list.sort(function (a, b) {
+      return b.start - a.start;
     });
     var i;
     for (i = 0; i < list.length; i += 1) {
       var r = list[i];
-      text = text.slice(0, r.valueStart) + r.newRawValue + text.slice(r.valueEnd);
+      text = text.slice(0, r.start) + r.value + text.slice(r.end);
     }
     return text;
   }
 
   global.StringI18nAndroidXml = {
+    stripAndroidComments: stripAndroidComments,
     parseAndroidXml: parseAndroidXml,
     rewriteAndroidXml: rewriteAndroidXml,
     parseAttributes: parseAttributes

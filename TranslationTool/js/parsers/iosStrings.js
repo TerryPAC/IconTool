@@ -6,6 +6,60 @@
    * Parse iOS .strings files: "key" = "value";
    * Skips // and /* * / comments for entry discovery; offsets refer to original text.
    */
+  function stripIosComments(rawText) {
+    var text = String(rawText);
+    var out = "";
+    var i = 0;
+    var len = text.length;
+    var inString = false;
+    var escaped = false;
+
+    while (i < len) {
+      var ch = text.charAt(i);
+      var next = text.charAt(i + 1);
+      if (inString) {
+        out += ch;
+        if (escaped) {
+          escaped = false;
+        } else if (ch === "\\") {
+          escaped = true;
+        } else if (ch === '"') {
+          inString = false;
+        }
+        i += 1;
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        out += ch;
+        i += 1;
+        continue;
+      }
+      if (ch === "/" && next === "/") {
+        while (i < len && text.charAt(i) !== "\n" && text.charAt(i) !== "\r") {
+          i += 1;
+        }
+        continue;
+      }
+      if (ch === "/" && next === "*") {
+        i += 2;
+        while (i < len && !(text.charAt(i) === "*" && text.charAt(i + 1) === "/")) {
+          if (text.charAt(i) === "\n" || text.charAt(i) === "\r") {
+            out += text.charAt(i);
+          }
+          i += 1;
+        }
+        if (i < len) {
+          i += 2;
+        }
+        continue;
+      }
+      out += ch;
+      i += 1;
+    }
+    return out;
+  }
+
   function parseIosStrings(rawText, fileId) {
     var text = String(rawText);
     var entries = [];
@@ -155,6 +209,7 @@
   }
 
   global.StringI18nIosStrings = {
+    stripIosComments: stripIosComments,
     parseIosStrings: parseIosStrings,
     rewriteIosStrings: rewriteIosStrings
   };

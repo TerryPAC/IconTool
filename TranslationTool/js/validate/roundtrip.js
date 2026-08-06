@@ -1,4 +1,4 @@
-/* global window, StringI18nPlaceholders, StringI18nUnescape, StringI18nAndroidXml, StringI18nIosStrings, StringI18nMergeEngine, StringI18nHash */
+/* global window, StringI18nPlaceholders, StringI18nUnescape, StringI18nAndroidXml, StringI18nIosStrings, StringI18nMergeEngine, StringI18nHash, StringI18nExportWriters */
 (function (global) {
   "use strict";
 
@@ -84,6 +84,20 @@
       assert(again.entries[1].key === "b", "order");
     });
 
+    test("source comments are removed before parsing", function () {
+      var android = StringI18nAndroidXml.stripAndroidComments(
+        "<resources><!-- header -->\n<string name=\"a\">A</string><!-- inline --></resources>"
+      );
+      var ios = StringI18nIosStrings.stripIosComments(
+        "/* header */\n// line\n\"a\" = \"A // stays in value\";\n"
+      );
+      assert(android.indexOf("<!--") === -1, "Android comment remains");
+      assert(ios.indexOf("/*") === -1 && ios.indexOf("// line") === -1, "iOS comment remains");
+      assert(ios.indexOf("A // stays in value") !== -1, "comment marker in value was removed");
+      assert(StringI18nAndroidXml.parseAndroidXml(android, "a.xml").entries.length === 1, "Android entries");
+      assert(StringI18nIosStrings.parseIosStrings(ios, "a.strings").entries.length === 1, "iOS entries");
+    });
+
     test("ios parse and rewrite", function () {
       var body =
         '/* header */\n"hello" = "Hello, %@!";\n"cont" = "Continue";\n';
@@ -130,6 +144,79 @@
         return e.skipped;
       });
       assert(skipped.length >= 1, "expected skip");
+    });
+
+    test("translatable false stays out unless explicitly included", function () {
+      var xml =
+        "<resources>" +
+        '<string name="hidden" translatable="false">Hidden</string>' +
+        '<string name="visible">Visible</string>' +
+        "</resources>";
+      var parsed = StringI18nAndroidXml.parseAndroidXml(xml, "skip.xml");
+      var defaultResult = StringI18nMergeEngine.mergeAll(
+        [{ platform: "android", fileId: "skip.xml", rawText: xml, entries: parsed.entries }],
+        {}
+      );
+      var includedResult = StringI18nMergeEngine.mergeAll(
+        [{ platform: "android", fileId: "skip.xml", rawText: xml, entries: parsed.entries }],
+        { includeNonTranslatable: true }
+      );
+      assert(defaultResult.stats.mergedCount === 1, "default merged count");
+      assert(defaultResult.mergedFull[0].source === "Visible", "skipped item entered merge list");
+      assert(
+        !Object.prototype.hasOwnProperty.call(defaultResult.mergedSimple, "hidden_1"),
+        "skipped item entered simple JSON"
+      );
+      var exported = StringI18nExportWriters.exportPlatformFiles(
+        {
+          mapping: defaultResult.mapping,
+          snapshots: { "android/skip.xml": xml }
+        },
+        defaultResult.mergedSimple,
+        {}
+      );
+      assert(exported.report.fileErrors.length === 0, "export file error");
+      var exportedEntries = StringI18nAndroidXml.parseAndroidXml(
+        exported.outputs[0].content,
+        "skip.xml"
+      ).entries;
+      assert(
+        exportedEntries.length === 1 && exportedEntries[0].key === "visible",
+        "skipped Android entries were written back"
+      );
+      assert(includedResult.stats.mergedCount === 2, "included merged count");
+    });
+
+    test("merge simple output uses compact key/value format", function () {
+      var parsed = StringI18nAndroidXml.parseAndroidXml(
+        "<resources><string name=\"photo\">Photo Art</string></resources>",
+        "simple.xml"
+      );
+      var result = StringI18nMergeEngine.mergeAll(
+        [{ platform: "android", fileId: "simple.xml", rawText: "", entries: parsed.entries }],
+        {}
+      );
+      assert(!Array.isArray(result.mergedSimple), "must be an object");
+      assert(result.mergedSimple.photo_art_1 === "Photo Art", JSON.stringify(result.mergedSimple));
+      assert(result.mergedFull[0].outputKey === "photo_art_1", "output key");
+    });
+
+    test("merge key limits the generated base to 40 characters", function () {
+      var longValue =
+        "This is a deliberately very long source string that exceeds forty characters and must remain intact.";
+      var parsed = StringI18nAndroidXml.parseAndroidXml(
+        "<resources><string name=\"long\">" + longValue + "</string></resources>",
+        "long.xml"
+      );
+      var result = StringI18nMergeEngine.mergeAll(
+        [{ platform: "android", fileId: "long.xml", rawText: "", entries: parsed.entries }],
+        {}
+      );
+      var outputKey = result.mergedFull[0].outputKey;
+      var baseKey = outputKey.slice(0, -2);
+      assert(baseKey.length <= 40, outputKey);
+      assert(outputKey.slice(-2) === "_1", outputKey);
+      assert(result.mergedSimple[outputKey] === longValue, "value was truncated or changed");
     });
 
     return results;

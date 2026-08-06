@@ -60,22 +60,29 @@
     return zip.generateAsync({ type: "blob" });
   }
 
-  function buildOutputZip(outputs, report, androidLocaleDir, iosLocaleDir) {
+  function getFlatFilename(fileId, usedNames) {
+    var baseName = String(fileId || "output").replace(/^.*[\\/]/, "") || "output";
+    var dot = baseName.lastIndexOf(".");
+    var stem = dot > 0 ? baseName.slice(0, dot) : baseName;
+    var ext = dot > 0 ? baseName.slice(dot) : "";
+    var candidate = baseName;
+    var suffix = 2;
+    while (usedNames[candidate]) {
+      candidate = stem + "_" + suffix + ext;
+      suffix += 1;
+    }
+    usedNames[candidate] = true;
+    return candidate;
+  }
+
+  function buildOutputZip(outputs, report) {
     ensureJsZip();
     var zip = new JSZip();
-    var androidRoot = zip.folder("android");
-    var iosRoot = zip.folder("ios");
-    var aDir = androidLocaleDir || "values-xx";
-    var iDir = iosLocaleDir || "xx.lproj";
+    var usedNames = {};
     var i;
     for (i = 0; i < outputs.length; i += 1) {
       var o = outputs[i];
-      var safeId = o.fileId.replace(/^\/+/, "");
-      if (o.platform === "android") {
-        androidRoot.file(aDir + "/" + safeId, o.content);
-      } else {
-        iosRoot.file(iDir + "/" + safeId, o.content);
-      }
+      zip.file(getFlatFilename(o.fileId, usedNames), o.content);
     }
     zip.file("report.json", JSON.stringify(report, null, 2));
     return zip.generateAsync({ type: "blob" });
