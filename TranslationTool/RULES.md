@@ -26,8 +26,12 @@ This document is the maintenance source of truth for TranslationTool input, merg
 
 ## 3. Merge rules
 
-- Deduplication uses placeholder-normalized source text and is case-sensitive.
-- Leading and trailing whitespace is preserved.
+- Deduplication uses placeholder- and whitespace-normalized source text and is case-sensitive.
+- A single ASCII space is left as a literal space (not replaced with `{{WS_n}}`) so translation backends still see normal word spacing.
+- Leading and trailing whitespace is not stripped. A single trailing/leading space stays literal; tabs, newlines, multiple spaces, and other special runs become `{{WS_n}}`.
+- Runs of non-trivial whitespace and invisible control characters (tab, newline, carriage return, 2+ spaces, other C0 controls, DEL, and non-space Unicode whitespace) are replaced with `{{WS_n}}` for merge comparison.
+- When Android and iOS differ only in those special characters, they share one translation entry; each platform's original special-character sequence is stored in mapping and restored on export.
+- Quotes, backslashes, percent signs, and other non-whitespace characters are not normalized this way and keep strings distinct.
 - Curly apostrophes are not normalized.
 - `%%` is always treated as literal text, not a placeholder.
 - Android `formatted="false"` disables `%...` format placeholder detection.
@@ -67,6 +71,7 @@ During Android localized export, skipped entries are omitted from the localized 
 
 - One JSON file represents one target language.
 - Every `{{PH_n}}` placeholder must be preserved with the same count and order.
+- Every `{{WS_n}}` whitespace/control token (if present) must be preserved with the same count and order.
 - Generated translation keys must not change.
 - When a translation value is empty:
   - with `Empty translation falls back to source` enabled, the source text is written back;
@@ -76,7 +81,8 @@ During Android localized export, skipped entries are omitted from the localized 
 
 - `session.zip` must be used with `translated.json` because it contains the mapping and source snapshots.
 - Before writing, the exporter validates the snapshot content hash, entry count, key order, and entry type.
-- An entry is not written when placeholder validation fails.
+- An entry is not written when placeholder or whitespace-token validation fails.
+- On write-back, `{{PH_n}}` is restored to that entry's platform-specific format placeholders, and `{{WS_n}}` is restored to that entry's original whitespace/control sequence from mapping.
 - Key and order are validated again after writing.
 - `output.zip` contains:
   - rewritten Android XML / iOS `.strings` files;

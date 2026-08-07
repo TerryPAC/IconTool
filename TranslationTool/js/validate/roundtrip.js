@@ -32,6 +32,7 @@
       assert(n.normalized === "100%% done {{PH_0}}", n.normalized);
       assert(n.placeholderPattern.length === 1, "patterns");
       assert(n.placeholderPattern[0] === "%1$s", n.placeholderPattern[0]);
+      assert(n.whitespacePattern.length === 0, "single spaces stay literal");
     });
 
     test("formatted=false skips percent formats", function () {
@@ -40,6 +41,16 @@
       });
       assert(n.normalized === "use %s literally", n.normalized);
       assert(n.placeholderPattern.length === 0, "no patterns");
+      assert(n.whitespaceTokens.length === 0, "single spaces stay literal");
+    });
+
+    test("single ascii space is not tokenized", function () {
+      var n = StringI18nPlaceholders.normalizePlaceholders("Hello World");
+      assert(n.normalized === "Hello World", n.normalized);
+      assert(n.whitespaceTokens.length === 0, "no ws tokens");
+      var multi = StringI18nPlaceholders.normalizePlaceholders("Hello  World");
+      assert(multi.normalized === "Hello{{WS_0}}World", multi.normalized);
+      assert(multi.whitespacePattern[0] === "  ", "two spaces tokenized");
     });
 
     test("android %1$s and ios %@ merge to same id", function () {
@@ -50,6 +61,83 @@
         StringI18nHash.makeMergedId(a.normalized) === StringI18nHash.makeMergedId(b.normalized),
         "ids differ"
       );
+    });
+
+    test("whitespace-only differences merge and restore per platform", function () {
+      var androidText = "Line1\nLine2";
+      var iosText = "Line1\tLine2";
+      var a = StringI18nPlaceholders.normalizePlaceholders(androidText);
+      var b = StringI18nPlaceholders.normalizePlaceholders(iosText);
+      assert(a.normalized === b.normalized, a.normalized + " vs " + b.normalized);
+      assert(a.normalized === "Line1{{WS_0}}Line2", a.normalized);
+      assert(a.whitespacePattern[0] === "\n", "android newline");
+      assert(b.whitespacePattern[0] === "\t", "ios tab");
+
+      var androidXml =
+        "<resources>\n" +
+        '<string name="a">Line1\\nLine2</string>\n' +
+        "</resources>";
+      var iosBody = '"a" = "Line1\\tLine2";\n';
+      var parsedA = StringI18nAndroidXml.parseAndroidXml(androidXml, "ws.xml");
+      var parsedI = StringI18nIosStrings.parseIosStrings(iosBody, "ws.strings");
+      var merged = StringI18nMergeEngine.mergeAll(
+        [
+          {
+            platform: "android",
+            fileId: "ws.xml",
+            rawText: androidXml,
+            entries: parsedA.entries
+          },
+          {
+            platform: "ios",
+            fileId: "ws.strings",
+            rawText: iosBody,
+            entries: parsedI.entries
+          }
+        ],
+        {}
+      );
+      assert(merged.stats.mergedCount === 1, "mergedCount=" + merged.stats.mergedCount);
+      assert(merged.stats.both === 1, "both=" + merged.stats.both);
+      var outputKey = merged.mergedFull[0].outputKey;
+      var translated = {};
+      translated[outputKey] = "[FR] " + merged.mergedSimple[outputKey];
+      var exported = StringI18nExportWriters.exportPlatformFiles(
+        {
+          mapping: merged.mapping,
+          snapshots: {
+            "android/ws.xml": androidXml,
+            "ios/ws.strings": iosBody
+          }
+        },
+        translated,
+        {}
+      );
+      assert(exported.report.fileErrors.length === 0, "fileErrors");
+      assert(exported.report.failed.length === 0, "failed");
+      var outA = StringI18nAndroidXml.parseAndroidXml(
+        exported.outputs.filter(function (o) {
+          return o.platform === "android";
+        })[0].content,
+        "ws.xml"
+      );
+      var outI = StringI18nIosStrings.parseIosStrings(
+        exported.outputs.filter(function (o) {
+          return o.platform === "ios";
+        })[0].content,
+        "ws.strings"
+      );
+      assert(outA.entries[0].decodedValue === "[FR] Line1\nLine2", outA.entries[0].decodedValue);
+      assert(outI.entries[0].decodedValue === "[FR] Line1\tLine2", outI.entries[0].decodedValue);
+    });
+
+    test("backslash and quote differences do not merge", function () {
+      var a = StringI18nPlaceholders.normalizePlaceholders('say "hi"');
+      var b = StringI18nPlaceholders.normalizePlaceholders("say hi");
+      assert(a.normalized !== b.normalized, "quote should keep strings distinct");
+      var c = StringI18nPlaceholders.normalizePlaceholders("path\\nname");
+      var d = StringI18nPlaceholders.normalizePlaceholders("pathname");
+      assert(c.normalized !== d.normalized, "backslash should keep strings distinct");
     });
 
     test("case sensitive Continue variants are distinct", function () {
@@ -213,10 +301,11 @@
         {}
       );
       var outputKey = result.mergedFull[0].outputKey;
-      var baseKey = outputKey.slice(0, -2);
+      var baseKey = outputKey.replace(/_\d+$/, "");
       assert(baseKey.length <= 40, outputKey);
-      assert(outputKey.slice(-2) === "_1", outputKey);
-      assert(result.mergedSimple[outputKey] === longValue, "value was truncated or changed");
+      assert(/_\d+$/.test(outputKey), outputKey);
+      var expectedNormalized = StringI18nPlaceholders.normalizePlaceholders(longValue).normalized;
+      assert(result.mergedSimple[outputKey] === expectedNormalized, "value was truncated or changed");
     });
 
     return results;

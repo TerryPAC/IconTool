@@ -44,7 +44,7 @@ The backend should modify JSON values only. Generated keys must remain unchanged
 }
 ```
 
-All `{{PH_n}}` placeholders must be preserved with the same count and order. One JSON file represents one target language.
+All `{{PH_n}}` placeholders and any `{{WS_n}}` whitespace/control tokens must be preserved with the same count and order. One JSON file represents one target language.
 
 ### 4. Export translated files
 
@@ -70,7 +70,7 @@ flowchart TD
     F --> G
     G --> H[buildFileRecords]
     H --> I[mergeAll]
-    I --> J[Filter, normalize placeholders, deduplicate]
+    I --> J[Filter, normalize placeholders and whitespace, deduplicate]
     J --> K[Generate merged.simple.json<br/>and mapping]
     K --> L[Download session.zip]
     K --> M[Translation backend updates values]
@@ -94,7 +94,7 @@ flowchart TD
 | `js/parsers/androidXml.js` | Android comment removal, XML parsing, and rewriting |
 | `js/parsers/iosStrings.js` | iOS comment removal, `.strings` parsing, and rewriting |
 | `js/merge/mergeEngine.js` | Skip rules, deduplication, merging, and mapping |
-| `js/normalize/placeholders.js` | Placeholder normalization such as `%1$s` and `%@` |
+| `js/normalize/placeholders.js` | Placeholder and whitespace normalization (`%1$s`/`%@`, `{{WS_n}}`) |
 | `js/export/androidWriter.js` | Translation validation, file rewriting, and export reports |
 | `js/export/zipDownload.js` | ZIP/JSON downloads and session read/write |
 | `js/validate/roundtrip.js` | Browser self-tests |
@@ -102,8 +102,10 @@ flowchart TD
 
 ## Rule summary
 
-- Deduplication uses case-sensitive, placeholder-normalized source text.
-- Source leading and trailing whitespace is preserved.
+- Deduplication uses case-sensitive source text after placeholder and whitespace/control normalization.
+- A single ASCII space stays literal; tabs, newlines, multiple spaces, and other special runs become protected `{{WS_n}}` tokens. Android/iOS strings that differ only in those characters share one translation and restore their own sequences on export.
+- Quotes, backslashes, and percent signs are not collapsed by whitespace normalization.
+- Source leading and trailing whitespace is not stripped.
 - `%%` is treated as literal text.
 - Android `formatted="false"` disables percent-format placeholder detection.
 - By default, non-translatable entries, empty values, and likely secrets/URLs/emails/numbers are skipped.

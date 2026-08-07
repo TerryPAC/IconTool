@@ -5,17 +5,28 @@
   /**
    * Placeholder patterns (left-to-right). %% is literal and kept as %%.
    * formatted=false: no % format scanning.
+   * Non-trivial whitespace / control runs become {{WS_n}} so Android/iOS can
+   * merge when only special characters differ; originals are restored per
+   * mapping entry. A single ASCII space is left as-is for translation quality.
    */
   var NAMED_BRACE_RE = /^\{\{[^{}]+\}\}/;
   var INDEX_BRACE_RE = /^\{[0-9]+\}/;
   // positional or conversion: %1$s, %2$@, %@, %s, %d, %ld, %f, %i, %u, etc.
   var FORMAT_RE = /^%(?:[1-9]\d*\$)?(?:ll[ud]|l[ud]|@|[a-zA-Z])/;
+  // Space, tab, LF, CR, other C0 controls, DEL, and Unicode whitespace (\s).
+  var SPECIAL_CHAR_RE = /^[\s\x00-\x1F\x7F]+/;
+
+  function isSingleAsciiSpace(run) {
+    return run.length === 1 && run === " ";
+  }
 
   function normalizePlaceholders(text, options) {
     var formatted = !options || options.formatted !== false;
     var s = String(text);
     var patterns = [];
     var tokens = [];
+    var whitespacePattern = [];
+    var whitespaceTokens = [];
     var out = "";
     var i = 0;
 
@@ -59,6 +70,21 @@
         }
       }
 
+      var special = rest.match(SPECIAL_CHAR_RE);
+      if (special) {
+        if (isSingleAsciiSpace(special[0])) {
+          out += " ";
+          i += 1;
+          continue;
+        }
+        var tokWs = "{{WS_" + whitespacePattern.length + "}}";
+        whitespacePattern.push(special[0]);
+        whitespaceTokens.push(tokWs);
+        out += tokWs;
+        i += special[0].length;
+        continue;
+      }
+
       out += s.charAt(i);
       i += 1;
     }
@@ -66,31 +92,64 @@
     return {
       normalized: out,
       placeholderPattern: patterns,
-      normalizeTokens: tokens
+      normalizeTokens: tokens,
+      whitespacePattern: whitespacePattern,
+      whitespaceTokens: whitespaceTokens
     };
   }
 
-  function restorePlaceholders(translatedNormalized, placeholderPattern, normalizeTokens) {
-    var text = String(translatedNormalized);
-    var patterns = placeholderPattern || [];
-    var tokens = normalizeTokens || [];
+  function restoreTokens(text, patterns, tokens, label) {
+    var out = String(text);
+    var pats = patterns || [];
+    var toks = tokens || [];
     var i;
-    for (i = 0; i < tokens.length; i += 1) {
-      var token = tokens[i];
-      var replacement = patterns[i];
+    for (i = 0; i < toks.length; i += 1) {
+      var token = toks[i];
+      var replacement = pats[i];
       if (replacement === undefined) {
-        throw new Error("Missing placeholderPattern for token " + token);
+        throw new Error("Missing " + label + " for token " + token);
       }
-      if (text.indexOf(token) === -1) {
-        throw new Error("Translation missing placeholder token " + token);
+      if (out.indexOf(token) === -1) {
+        throw new Error("Translation missing " + label + " token " + token);
       }
-      text = text.split(token).join(replacement);
+      out = out.split(token).join(replacement);
     }
-    // leftover {{PH_n}} means extra/unknown
+    return out;
+  }
+
+  function restorePlaceholders(translatedNormalized, placeholderPattern, normalizeTokens) {
+    var text = restoreTokens(
+      translatedNormalized,
+      placeholderPattern,
+      normalizeTokens,
+      "placeholderPattern"
+    );
     if (/\{\{PH_\d+\}\}/.test(text)) {
       throw new Error("Translation contains unexpected placeholder tokens");
     }
     return text;
+  }
+
+  function restoreWhitespace(translatedNormalized, whitespacePattern, whitespaceTokens) {
+    var text = restoreTokens(
+      translatedNormalized,
+      whitespacePattern,
+      whitespaceTokens,
+      "whitespacePattern"
+    );
+    if (/\{\{WS_\d+\}\}/.test(text)) {
+      throw new Error("Translation contains unexpected whitespace tokens");
+    }
+    return text;
+  }
+
+  function restoreAll(translatedNormalized, mapEntry) {
+    var text = restorePlaceholders(
+      translatedNormalized,
+      mapEntry.placeholderPattern,
+      mapEntry.normalizeTokens
+    );
+    return restoreWhitespace(text, mapEntry.whitespacePattern, mapEntry.whitespaceTokens);
   }
 
   function extractPhTokens(text) {
@@ -103,31 +162,64 @@
     return found;
   }
 
-  function validatePlaceholderParity(sourceNormalized, translation) {
-    var srcTokens = extractPhTokens(sourceNormalized);
-    var dstTokens = extractPhTokens(translation);
-    if (srcTokens.length !== dstTokens.length) {
+  function extractWsTokens(text) {
+    var re = /\{\{WS_(\d+)\}\}/g;
+    var found = [];
+    var m;
+    while ((m = re.exec(String(text))) !== null) {
+      found.push(m[0]);
+    }
+    return found;
+  }
+
+  function validateTokenList(expectedTokens, foundTokens, label) {
+    if (expectedTokens.length !== foundTokens.length) {
       return {
         ok: false,
-        message: "Placeholder count mismatch: source=" + srcTokens.length + " translation=" + dstTokens.length
+        message:
+          label +
+          " count mismatch: expected=" +
+          expectedTokens.length +
+          " got=" +
+          foundTokens.length
       };
     }
     var i;
-    for (i = 0; i < srcTokens.length; i += 1) {
-      if (srcTokens[i] !== dstTokens[i]) {
+    for (i = 0; i < expectedTokens.length; i += 1) {
+      if (expectedTokens[i] !== foundTokens[i]) {
         return {
           ok: false,
-          message: "Placeholder order/content mismatch at index " + i
+          message: label + " order/content mismatch at index " + i
         };
       }
     }
     return { ok: true, message: "" };
   }
 
+  function validatePlaceholderParity(sourceNormalized, translation) {
+    return validateTokenList(
+      extractPhTokens(sourceNormalized),
+      extractPhTokens(translation),
+      "Placeholder"
+    );
+  }
+
+  function validateWhitespaceParity(sourceNormalized, translation) {
+    return validateTokenList(
+      extractWsTokens(sourceNormalized),
+      extractWsTokens(translation),
+      "Whitespace"
+    );
+  }
+
   global.StringI18nPlaceholders = {
     normalizePlaceholders: normalizePlaceholders,
     restorePlaceholders: restorePlaceholders,
+    restoreWhitespace: restoreWhitespace,
+    restoreAll: restoreAll,
     validatePlaceholderParity: validatePlaceholderParity,
-    extractPhTokens: extractPhTokens
+    validateWhitespaceParity: validateWhitespaceParity,
+    extractPhTokens: extractPhTokens,
+    extractWsTokens: extractWsTokens
   };
 })(window);

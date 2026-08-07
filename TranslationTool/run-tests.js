@@ -131,6 +131,86 @@ if (exported.outputs.length !== 2) {
       break;
     }
   }
+
+  // Whitespace-only Android/iOS pairs must share one merged entry and restore per platform.
+  var bothWs = merged.mergedFull.filter(function (m) {
+    return (
+      m.meta.platforms.indexOf("android") !== -1 &&
+      m.meta.platforms.indexOf("ios") !== -1 &&
+      m.source.indexOf("{{WS_") !== -1 &&
+      (m.source.indexOf("Line") !== -1 || m.source.indexOf("Hello") !== -1) &&
+      m.source.indexOf("{{PH_") === -1
+    );
+  });
+  if (bothWs.length < 2) {
+    failed.push({
+      name: "fixture whitespace merge pairs",
+      ok: false,
+      message: "expected >=2 both-platform WS merges, got " + bothWs.length
+    });
+  }
+
+  var outAEntries = sandbox.StringI18nAndroidXml.parseAndroidXml(
+    outAndroid.content,
+    outAndroid.fileId
+  ).entries;
+  var outIEntries = sandbox.StringI18nIosStrings.parseIosStrings(
+    outIos.content,
+    outIos.fileId
+  ).entries;
+  function findDecoded(entries, key) {
+    var e;
+    for (e = 0; e < entries.length; e += 1) {
+      if (entries[e].key === key) {
+        return entries[e].decodedValue;
+      }
+    }
+    return null;
+  }
+  var androidLine = findDecoded(outAEntries, "line_break_sample");
+  var iosLine = findDecoded(outIEntries, "line_break_sample");
+  if (androidLine !== "[FR] Line one\nLine two") {
+    failed.push({
+      name: "fixture android line_break restore",
+      ok: false,
+      message: String(androidLine)
+    });
+  }
+  if (iosLine !== "[FR] Line one\tLine two") {
+    failed.push({
+      name: "fixture ios line_break restore",
+      ok: false,
+      message: String(iosLine)
+    });
+  }
+  var androidWs = findDecoded(outAEntries, "ws_between_words");
+  var iosWs = findDecoded(outIEntries, "ws_between_words");
+  if (androidWs !== "[FR] Hello  World") {
+    failed.push({
+      name: "fixture android ws_between_words restore",
+      ok: false,
+      message: String(androidWs)
+    });
+  }
+  if (iosWs !== "[FR] Hello\tWorld") {
+    failed.push({
+      name: "fixture ios ws_between_words restore",
+      ok: false,
+      message: String(iosWs)
+    });
+  }
+
+  // Quote difference must not collapse Android "He said hi" with iOS He said "hi"
+  var quoteMerged = merged.mergedFull.filter(function (m) {
+    return m.source.indexOf("said") !== -1;
+  });
+  if (quoteMerged.length < 2) {
+    failed.push({
+      name: "fixture quote strings stay distinct",
+      ok: false,
+      message: "expected distinct quote variants, got " + quoteMerged.length
+    });
+  }
 }
 
 // Real photoart smoke (parse + merge only)

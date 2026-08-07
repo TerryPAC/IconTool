@@ -8,8 +8,14 @@
     <string name="with_apostrophe">You\'ve unlocked our deal</string>
     <string name="with_html"><u>Forgot your password?</u></string>
     <string name="trailing_space">Increase quantity </string>
+    <!-- Same wording as iOS; Android uses newline, iOS uses tab — should merge via {{WS_n}} -->
+    <string name="line_break_sample">Line one\nLine two</string>
+    <!-- Same wording as iOS; Android uses two spaces, iOS uses one tab between words -->
+    <string name="ws_between_words">Hello  World</string>
     <string name="api_key_sample" translatable="false">35vefmcjc2q2pvpxxxxxxxxxxxxxxxxxxxxxxxx</string>
     <string name="dropbox_api_key">abcdefghijklmnopqrstuvwxyz0123456789ABCD</string>
     <string name="formatted_false" formatted="false">Use %s as literal text</string>
     <string name="amp_sample">A &amp; B</string>
+    <!-- Quote content differs from iOS with_quote — must stay distinct -->
+    <string name="with_quote">He said hi</string>
 </resources>

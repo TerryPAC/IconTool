@@ -5,4 +5,9 @@
 "percent_literal" = "Save 50%% today";
 "only_ios" = "ONLY_IOS_UNIQUE";
 // trailing comment
+/* Same wording as Android; iOS uses tab, Android uses newline — should merge via {{WS_n}} */
+"line_break_sample" = "Line one\tLine two";
+/* Same wording as Android; iOS uses tab, Android uses two spaces */
+"ws_between_words" = "Hello\tWorld";
+/* Quotes differ from Android with_quote ("He said hi") — must stay distinct */
 "with_quote" = "He said \"hi\"";

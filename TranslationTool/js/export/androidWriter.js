@@ -33,11 +33,17 @@
         return { action: "fail", reason: "empty translation for " + mapEntry.mergedId };
       }
     }
-    var parity = StringI18nPlaceholders.validatePlaceholderParity(
+    var sourceNormalized =
       (row.source !== undefined && row.source !== null ? row.source : null) ||
-        StringI18nPlaceholders.normalizePlaceholders(mapEntry.originalDecoded, {
-          formatted: true
-        }).normalized,
+      StringI18nPlaceholders.normalizePlaceholders(mapEntry.originalDecoded, {
+        formatted: true
+      }).normalized;
+    var parity = StringI18nPlaceholders.validatePlaceholderParity(
+      sourceNormalized,
+      translation
+    );
+    var wsParity = StringI18nPlaceholders.validateWhitespaceParity(
+      sourceNormalized,
       translation
     );
     // Prefer validating against mapping tokens length
@@ -64,16 +70,37 @@
         };
       }
     }
+    var expectedWs = mapEntry.whitespaceTokens || [];
+    var foundWs = StringI18nPlaceholders.extractWsTokens(translation);
+    if (expectedWs.length !== foundWs.length) {
+      return {
+        action: "fail",
+        reason:
+          "whitespace token count mismatch for " +
+          mapEntry.key +
+          ": expected " +
+          expectedWs.length +
+          " got " +
+          foundWs.length
+      };
+    }
+    for (ti = 0; ti < expectedWs.length; ti += 1) {
+      if (foundWs[ti] !== expectedWs[ti]) {
+        return {
+          action: "fail",
+          reason: "whitespace token order mismatch for " + mapEntry.key + " at " + ti
+        };
+      }
+    }
     if (!parity.ok && expectedTokens.length > 0) {
       // still proceed if token list matches mapping; parity uses source field
     }
+    if (!wsParity.ok && expectedWs.length > 0) {
+      // still proceed if token list matches mapping
+    }
     var decodedRestored;
     try {
-      decodedRestored = StringI18nPlaceholders.restorePlaceholders(
-        translation,
-        mapEntry.placeholderPattern,
-        mapEntry.normalizeTokens
-      );
+      decodedRestored = StringI18nPlaceholders.restoreAll(translation, mapEntry);
     } catch (err) {
       return { action: "fail", reason: String(err.message || err) };
     }
